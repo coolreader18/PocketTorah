@@ -1,0 +1,20 @@
+html,
+body {
+  height: 100%;
+}
+body {
+  overflow: hidden;
+}
+#app {
+  display: flex;
+  height: 100%;
+}
+
+@font-face {
+  font-family: "Stam Ashkenaz CLM";
+  src: url(../fonts/stamashkenazclm-webfont.ttf);
+}
+@font-face {
+  font-family: "Taamey Frank Taamim Fix";
+  src: url(../fonts/TaameyFrank-taamim-fix.ttf);
+}
