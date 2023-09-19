@@ -21,7 +21,7 @@ import {
 import Slider from '@react-native-community/slider';
 
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { StackNavigationProp, StackScreenProps, createStackNavigator } from '@react-navigation/stack';
 
 import maftirOffset from '../data/maftirOffset.json';
 import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
@@ -31,19 +31,29 @@ import {
   formatAliyahShort,
   parshiyot,
   BOOK,
+  Leyning,
+  Aliyah,
 } from "@hebcal/leyning";
 
 import {
   audio as audioMap,
   labels as labelsMap,
   bookMap,
+  transBookMap,
 } from "./assetImports";
 
 import binarySearch from 'binary-search';
-import { Audio } from "expo-av";
+import { Audio, AVPlaybackStatusSuccess } from "expo-av";
+import { platformSelect } from './utils';
 
 
-function CustomButton({ doOnPress, style, buttonTitle }) {
+type CustomButtonProps = {
+  doOnPress?: () => void;
+  style?: object;
+  buttonTitle: string;
+};
+
+function CustomButton({ doOnPress, style, buttonTitle }: CustomButtonProps) {
   return (
     <TouchableOpacity onPress={doOnPress} style={style}>
       <Text style={styles.button}>{buttonTitle}</Text>
@@ -51,7 +61,7 @@ function CustomButton({ doOnPress, style, buttonTitle }) {
   );
 }
 
-function FooterButton({ doOnPress, style, buttonTitle }) {
+function FooterButton({ doOnPress, style, buttonTitle }: CustomButtonProps) {
   return (
     <TouchableOpacity onPress={doOnPress} style={style}>
       <Text style={styles.footerButtonInner}>{buttonTitle}</Text>
@@ -59,18 +69,11 @@ function FooterButton({ doOnPress, style, buttonTitle }) {
   );
 }
 
-const haftAlias = {
-  'I Kings': 'Kings_1',
-  'II Kings': 'Kings_2',
-  'I Samuel': 'Samuel_1',
-  'II Samuel': 'Samuel_2',
-};
-
-function HomeScreen({ navigation }) {
+function HomeScreen({ navigation }: ScreenProps<"Home">) {
   const { navigate } = navigation;
 
-    return (
-      <ScrollView>
+  return (
+    <ScrollView>
       <CustomButton
         doOnPress={() => navigate("TorahReadingsScreen")}
         buttonTitle="List of Torah Readings"
@@ -83,13 +86,13 @@ function HomeScreen({ navigation }) {
         doOnPress={() => navigate("About")}
         buttonTitle="About this App"
       />
-      </ScrollView>
-    );
-  }
+    </ScrollView>
+  );
+}
 
 function AboutScreen() {
-    return (
-      <View style={styles.aboutPage}>
+  return (
+    <View style={styles.aboutPage}>
       <Text style={styles.aboutPageText}>
         PocketTorah is a labor of love maintained by Russel Neiss & Charlie
         Schwartz.
@@ -103,23 +106,25 @@ function AboutScreen() {
         If you like it, or find it useful, please consider making a donation to
         the Jewish charity of your choice.
       </Text>
-        <Text style={styles.aboutPageHeader}>Torah Readers:</Text>
-        <View>
-          <Text style={styles.aboutPageListItem}>Etta Abramson</Text>
-          <Text style={styles.aboutPageListItem}>Joshua Foster</Text>
-          <Text style={styles.aboutPageListItem}>Eitan Konigsberg</Text>
-          <Text style={styles.aboutPageListItem}>Eytan Kurshan</Text>
-          <Text style={styles.aboutPageListItem}>Ari Lucas</Text>
-          <Text style={styles.aboutPageListItem}>Rabbi Ita Paskind</Text>
-          <Text style={styles.aboutPageListItem}>Rebecca Russo</Text>
-          <Text style={styles.aboutPageListItem}>Joshua Schwartz</Text>
-          <Text style={styles.aboutPageListItem}>Abigail Teller</Text>
-        </View>
+      <Text style={styles.aboutPageHeader}>Torah Readers:</Text>
+      <View>
+        <Text style={styles.aboutPageListItem}>Etta Abramson</Text>
+        <Text style={styles.aboutPageListItem}>Joshua Foster</Text>
+        <Text style={styles.aboutPageListItem}>Eitan Konigsberg</Text>
+        <Text style={styles.aboutPageListItem}>Eytan Kurshan</Text>
+        <Text style={styles.aboutPageListItem}>Ari Lucas</Text>
+        <Text style={styles.aboutPageListItem}>Rabbi Ita Paskind</Text>
+        <Text style={styles.aboutPageListItem}>Rebecca Russo</Text>
+        <Text style={styles.aboutPageListItem}>Joshua Schwartz</Text>
+        <Text style={styles.aboutPageListItem}>Abigail Teller</Text>
       </View>
-    );
-  }
+    </View>
+  );
+}
 
-function TorahReadingsScreen({ navigation }) {
+function TorahReadingsScreen({
+  navigation,
+}: ScreenProps<"TorahReadingsScreen">) {
   const { navigate } = navigation;
 
   //create button for each parsha
@@ -138,14 +143,22 @@ function TorahReadingsScreen({ navigation }) {
   );
 }
 
-function AliyahSelectScreen({ route, navigation }) {
+function AliyahSelectScreen({
+  route,
+  navigation,
+}: ScreenProps<"AliyahSelectScreen">) {
   const reading = getLeyningForParsha(route.params.parshah);
   return <AliyahSelect navigation={navigation} reading={reading} />;
 }
 
-function AliyahSelect({ navigation, reading }) {
+type AliyahSelectProps = {
+  navigation: StackNavigationProp<Params>;
+  reading: Leyning;
+};
+
+function AliyahSelect({ navigation, reading }: AliyahSelectProps) {
   const { navigate } = navigation;
-  const parshah = reading.name.en;
+  const parshah = reading.name.en as Parshah;
 
   useEffect(() => {
     navigation.setOptions({ title: parshah });
@@ -154,22 +167,24 @@ function AliyahSelect({ navigation, reading }) {
   const readings = Object.entries(reading.fullkriyah).map(([num, aliyah]) => {
     const aliyahName = num === "M" ? "Maftir Aliyah" : `Aliyah ${num}`;
     return {
-        num,
+      num: num as AliyahNum,
       buttonTitle: `${aliyahName}: ${formatAliyahShort(aliyah, false)}`,
     };
   });
   readings.push({ num: "H", buttonTitle: `Haftarah: ${reading.haftara}` });
-    const content = readings.map(({ num, buttonTitle }) => (
-      <CustomButton
-        key={num}
+  const content = readings.map(({ num, buttonTitle }) => (
+    <CustomButton
+      key={num}
       doOnPress={() => navigate("PlayViewScreen", { parshah, aliyah: num })}
-        buttonTitle={buttonTitle}
-      />
-    ));
-    return <ScrollView>{content}</ScrollView>;
-  }
+      buttonTitle={buttonTitle}
+    />
+  ));
+  return <ScrollView>{content}</ScrollView>;
+}
 
-function ParshahHashavuaScreen({ navigation }) {
+function ParshahHashavuaScreen({
+  navigation,
+}: ScreenProps<"ParshahHashavuaScreen">) {
   //figure out current parshah
   const today = new HDate();
   // const hdate = new HDate(28, 'Tamuz', 5795);
@@ -183,11 +198,19 @@ function ParshahHashavuaScreen({ navigation }) {
   } while (reading.parsha == null);
 
   return <AliyahSelect navigation={navigation} reading={reading} />;
-  }
+}
 
-/** @typedef {import("@hebcal/leyning").Aliyah} Aliyah */
+type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
+  ImportMap<T>[keyof ImportMap<T>];
+type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
+  [k in keyof T]: Awaited<ReturnType<T[k]>>["default"];
+};
+type Labels = ImportType<typeof labelsMap>;
+type Parshah = keyof typeof maftirOffset;
+type TorahBookName = keyof typeof labelsMap;
+type BookName = keyof typeof transBookMap;
 
-function PlayViewScreen({ route, navigation }) {
+function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
   const aliyah = useMemo(() => {
     const reading = getLeyningForParsha(params.parshah);
@@ -198,21 +221,25 @@ function PlayViewScreen({ route, navigation }) {
 
   // in the files in data/, the maftir is in the 7th aliyah, so we need to
   // adjust for that with startingWordOffset
-  const dataAliyahNum = (params.aliyah === "M" ? "7" : params.aliyah);
-  const dataParshaName =
-    params.parshah + "-" + (params.aliyah === "M" ? "7" : params.aliyah);
+  const dataAliyahNum = params.aliyah === "M" ? "7" : params.aliyah;
   const startingWordOffset =
     params.aliyah === "M" ? maftirOffset[params.parshah] : 0;
 
   const audio = useAudio(audioMap[params.parshah][dataAliyahNum]);
 
-  const parshahBook = BOOK[parshiyot[params.parshah].book];
-  const allLabels = usePromise(labelsMap[parshahBook], [parshahBook]);
-  const labels = allLabels && allLabels[params.parshah][dataAliyahNum];
+  const parshahBook = BOOK[parshiyot[params.parshah].book] as TorahBookName;
+  const allLabels = usePromise<Labels>(labelsMap[parshahBook], [parshahBook]);
+  const labels: number[] =
+    allLabels && (allLabels as any)[params.parshah][dataAliyahNum];
 
-  const originatingBook = haftAlias[aliyah[0].k] || aliyah[0].k;
-  const book = usePromise(bookMap[originatingBook], [originatingBook]);
-  const transBook = usePromise(bookMap[originatingBook + "Trans"], [originatingBook]);
+  const book = usePromise<Book[]>(
+    () => Promise.all(aliyah.map(({ k }) => bookMap[k as BookName]())),
+    [aliyah]
+  );
+  const transBook = usePromise<TransBook[]>(
+    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]())),
+    [aliyah]
+  );
 
   const [textSizeMultiplier, setTextSizeMultiplier] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
@@ -222,7 +249,7 @@ function PlayViewScreen({ route, navigation }) {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <View style={{ marginRight: "5px" }}>
+        <View style={{ marginRight: 5 }}>
           <Button title="Settings" onPress={() => setModalVisible(true)} />
         </View>
       ),
@@ -237,12 +264,12 @@ function PlayViewScreen({ route, navigation }) {
       </View>
     );
   } else {
-    const changeAudioTime = (wordIndex) => {
+    const changeAudioTime = (wordIndex: number) => {
       var newTime = labels[wordIndex - startingWordOffset];
       audio.setCurrentTime(newTime);
     };
 
-    const unBitwiseNot = (x) => (x < 0 ? ~x : x);
+    const unBitwiseNot = (x: number) => (x < 0 ? ~x : x);
     const audioInactive = !audio.playing && audio.currentTime == 0;
     const activeWordIndex = audioInactive
       ? null
@@ -280,7 +307,7 @@ function PlayViewScreen({ route, navigation }) {
             tikkunFlag={tikkunOn}
             textSizeMultiplier={textSizeMultiplier}
             activeWordIndex={activeWordIndex}
-            book={book.Tanach.tanach.book}
+            book={book}
             transBook={transBook}
             aliyah={aliyah}
           />
@@ -313,22 +340,29 @@ function PlayViewScreen({ route, navigation }) {
   }
 }
 
+type PlaySettingsProps = {
+  textSizeMultiplier: number;
+  setTextSizeMultiplier: (v: number) => void;
+  audioSpeed: number;
+  setAudioSpeed: (v: number) => void;
+  closeSettings: () => void;
+};
 function PlaySettings({
   textSizeMultiplier,
   setTextSizeMultiplier,
   audioSpeed,
   setAudioSpeed,
   closeSettings,
-}) {
+}: PlaySettingsProps) {
   const [settingsTextSize, setSettingsTextSize] = useState(textSizeMultiplier);
   const [savedAudioSpeed, setSavedAudioSpeed] = useState(audioSpeed);
 
   return (
     <View style={{ marginTop: 22 }}>
-          <View>
-              <Text style={styles.modalHeader}>Settings</Text>
-            <View style={styles.modalSection}>
-              <Text>Font Size:</Text>
+      <View>
+        <Text style={styles.modalHeader}>Settings</Text>
+        <View style={styles.modalSection}>
+          <Text>Font Size:</Text>
           <Slider
             minimumValue={0.5}
             maximumValue={2}
@@ -339,18 +373,18 @@ function PlaySettings({
             בְּרֵאשִׁ֖ית
           </Text>
           <Text style={getTextStyle(true, settingsTextSize)}>בראשית</Text>
-            </View>
-            <View style={styles.modalSection}>
-              <Text>Set Audio Speed:</Text>
+        </View>
+        <View style={styles.modalSection}>
+          <Text>Set Audio Speed:</Text>
           <Slider
             minimumValue={0.5}
             maximumValue={2}
             value={audioSpeed}
             onValueChange={setAudioSpeed}
           />
-            </View>
+        </View>
 
-            <View style={styles.modalFooter}>
+        <View style={styles.modalFooter}>
           <CustomButton
             doOnPress={() => {
               setSavedAudioSpeed(audioSpeed);
@@ -367,21 +401,18 @@ function PlaySettings({
             }}
             buttonTitle="Cancel"
           />
-         </View>
-          </View>
         </View>
-      );
+      </View>
+    </View>
+  );
 }
 
-function useAudio(title) {
-  const [audio, setAudio] = useState(/** @type {Audio.Sound} */ (null));
-  const [status, setStatus] = useState(
-    /** @type {import("expo-av").AVPlaybackStatusSuccess} */ (null)
-  );
+function useAudio(title: import("expo-av").AVPlaybackSource) {
+  const [audio, setAudio] = useState<Audio.Sound | null>(null);
+  const [status, setStatus] = useState<AVPlaybackStatusSuccess | null>(null);
   useEffect(() => {
     let ignore = false;
-    /** @type {Audio.Sound} */
-    let thisAudio = null;
+    let thisAudio: Audio.Sound | null = null;
     Audio.Sound.createAsync(
       title,
       { progressUpdateIntervalMillis: __DEV__ ? 500 : 50 },
@@ -406,7 +437,7 @@ function useAudio(title) {
   if (!audio || !status) return null;
   return {
     currentTime: status.positionMillis / 1000,
-    setCurrentTime: (time) => {
+    setCurrentTime: (time: number) => {
       audio.setStatusAsync({ positionMillis: time * 1000, shouldPlay: true });
     },
     playing: status.isPlaying,
@@ -420,7 +451,7 @@ function useAudio(title) {
       audio.setStatusAsync({ shouldPlay: !status.isPlaying });
     },
     speed: status.rate,
-    setSpeed: (speed) => {
+    setSpeed: (speed: number) => {
       audio.setStatusAsync({
         rate: speed,
         shouldCorrectPitch: true,
@@ -430,12 +461,11 @@ function useAudio(title) {
   };
 }
 
-/**
- * @template T
- * @param {() => Promise<T>} getProm
- * @returns {T | null} */
-function usePromise(getProm, dependencies) {
-  const [result, setResult] = useState(null);
+function usePromise<T>(
+  getProm: () => Promise<T>,
+  dependencies: React.DependencyList
+): T | null {
+  const [result, setResult] = useState<T | null>(null);
   useEffect(() => {
     let ignore = false;
     getProm()
@@ -443,37 +473,46 @@ function usePromise(getProm, dependencies) {
         if (!ignore) setResult(result);
       })
       .catch((err) => console.error(err));
-    return () => (ignore = true);
+    return () => {
+      ignore = true;
+    };
   }, dependencies);
   return result;
 }
 
-/** @returns {[number, number]} */
-function parseChV(s) {
+function parseChV(s: string): [number, number] {
   const [ch, v] = s.split(":");
   return [parseInt(ch) - 1, parseInt(v) - 1]
 }
 
-/** @param {{ aliyah: Aliyah[], translationFlag: boolean }} props */
-function Verses(props) {
-  const {
-  aliyah,
-  book,
-  transBook,
-  translationFlag,
-  activeWordIndex,
-  } = props;
-  const verseText = [];
-  aliyah.forEach((aliyah) => {
+type Book = ImportType<typeof bookMap>;
+type TransBook = ImportType<typeof transBookMap>;
+type VersesProps = {
+  aliyah: Aliyah[];
+  book: Book[];
+  transBook: TransBook[];
+  translationFlag: boolean;
+  activeWordIndex: number | null;
+  tikkunFlag: boolean;
+  changeAudioTime: (wordIndex: number) => void;
+  textSizeMultiplier: number;
+};
+function Verses(props: VersesProps) {
+  const { aliyah, book, transBook, translationFlag, activeWordIndex } = props;
+  const verseText: React.JSX.Element[] = [];
+  aliyah.forEach((aliyah, i) => {
+    const b = book[i].Tanach.tanach.book;
+    const t = transBook[i];
     let lastWordIndex = 0;
     let [curChapter, curVerse] = parseChV(aliyah.b);
     const [endChapter, endVerse] = parseChV(aliyah.e);
     while (!(curChapter == endChapter && curVerse == endVerse)) {
-      if (!book.c[curChapter].v[curVerse]) {
+      const verse = b.c[curChapter]!.v[curVerse];
+      if (verse == null) {
         curChapter = curChapter + 1;
         curVerse = 0;
+        continue;
       }
-      const verse = book.c[curChapter].v[curVerse];
       verseText.push(
         <Verse
           {...props}
@@ -489,9 +528,9 @@ function Verses(props) {
         verseText.push(
           <Text
             key={`translation${curChapter}:${curVerse}`}
-            style={{ paddingHorizontal: "5px" }}
+            style={{ paddingHorizontal: 5 }}
           >
-            {transBook.text[curChapter][curVerse]}
+            {t.text[curChapter][curVerse]}
           </Text>
         );
       }
@@ -504,12 +543,22 @@ function Verses(props) {
   return translationFlag ? <View>{verseText}</View> : <Text>{verseText}</Text>;
 }
 
-const getTextStyle = (tikkun, textSizeMultiplier) => [
+const getTextStyle = (tikkun: boolean, textSizeMultiplier: number) => [
   tikkun ? styles.stam : styles.word,
   { fontSize: (tikkun ? 30 : 36) * textSizeMultiplier },
 ];
 
-function Verse(props) {
+type VerseProps = {
+  tikkunFlag: boolean,
+  changeAudioTime: (wordIndex: number) => void,
+  textSizeMultiplier: number,
+  curWordIndex: number,
+  chapterIndex: number,
+  verseIndex: number,
+  verse: NonNullable<Book['Tanach']['tanach']['book']['c'][0]>['v'][0],
+  activeWordIndex: number | null,
+};
+function Verse(props: VerseProps) {
   const {
     tikkunFlag,
     changeAudioTime,
@@ -527,7 +576,7 @@ function Verse(props) {
     const active = wordIndex === activeWordIndex;
     const wordElem = (
       <Text style={[textStyle, active && styles.active]}>
-        {word.replace(deleteRegex, "")}
+        {(word as string).replace(deleteRegex, "")}
       </Text>
     );
     return (
@@ -567,10 +616,27 @@ function Verse(props) {
 //   PlayViewScreen: { screen: PlayViewScreen },
 // });
 
+type Params = {
+  Home: undefined;
+  About: undefined;
+  TorahReadingsScreen: undefined;
+  AliyahSelectScreen: {
+    parshah: string;
+  };
+  ParshahHashavuaScreen: undefined;
+  PlayViewScreen: {
+    parshah: Parshah;
+    aliyah: AliyahNum;
+  };
+};
+type AliyahNum = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "M" | "H";
+type ScreenProps<RouteName extends keyof Params> = StackScreenProps<
+  Params,
+  RouteName
+>;
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<Params>();
 
-// /** @type {import("@react-navigation/native").LinkingOptions} */
 // const linking = {
 //   config: {
 //     screens: {
@@ -599,7 +665,6 @@ const App = () => (
   </NavigationContainer>
 );
 
-const platformSelect = (plats, def) => Platform.OS in plats ? plats[Platform.OS] : def;
 
 const styles = StyleSheet.create({
   container: {
@@ -672,8 +737,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "inital",
     paddingRight: platformSelect({ android: 5 }, null),
+    // @ts-ignore
     verticalAlign: platformSelect({ web: "100%" }, null),
   },
+  // @ts-ignore
   verseNumWrapper: platformSelect({ web: { display: "contents" } }, {}),
   modalHeader: {
     fontSize: 17,

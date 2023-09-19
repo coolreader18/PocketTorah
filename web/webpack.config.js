@@ -10,7 +10,7 @@ const appDirectory = path.resolve(__dirname, "../");
 // errors. To fix this webpack can be configured to compile to the necessary
 // `node_module`.
 const babelLoaderConfiguration = {
-  test: /\.js$/,
+  test: /\.(js|ts|tsx)$/,
   // Add every directory that needs to be compiled by Babel during the build.
   include: [
     path.resolve(appDirectory, "web"),
@@ -72,7 +72,7 @@ module.exports = (env) => ({
     // If you're working on a multi-platform React Native app, web-specific
     // module implementations should be written in files using the extension
     // `.web.js`.
-    extensions: [".web.js", ".js"],
+    extensions: [".web.js", ".js", ".web.ts", ".ts", ".web.tsx", ".tsx"],
   },
   plugins: [
     new webpack.EnvironmentPlugin({ REACT_NAV_LOGGING: "" }),
