@@ -6,7 +6,7 @@
  * @flow strict-local
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -16,14 +16,17 @@ import {
   ActivityIndicator,
   Button,
   Modal,
-  Platform,
-} from 'react-native';
-import Slider from '@react-native-community/slider';
+} from "react-native";
+import Slider from "@react-native-community/slider";
 
-import { NavigationContainer } from '@react-navigation/native';
-import { StackNavigationProp, StackScreenProps, createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer } from "@react-navigation/native";
+import {
+  StackNavigationProp,
+  StackScreenProps,
+  createStackNavigator,
+} from "@react-navigation/stack";
 
-import maftirOffset from '../data/maftirOffset.json';
+import maftirOffset from "../data/maftirOffset.json";
 import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
 import {
   getLeyningOnDate,
@@ -35,17 +38,11 @@ import {
   Aliyah,
 } from "@hebcal/leyning";
 
-import {
-  audio as audioMap,
-  labels as labelsMap,
-  bookMap,
-  transBookMap,
-} from "./assetImports";
+import { audio as audioMap, labels as labelsMap, bookMap, transBookMap } from "./assetImports";
 
-import binarySearch from 'binary-search';
+import binarySearch from "binary-search";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
-import { platformSelect } from './utils';
-
+import { platformSelect } from "./utils";
 
 type CustomButtonProps = {
   doOnPress?: () => void;
@@ -82,10 +79,7 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
         doOnPress={() => navigate("ParshahHashavuaScreen")}
         buttonTitle="This Week's Torah Readings"
       />
-      <CustomButton
-        doOnPress={() => navigate("About")}
-        buttonTitle="About this App"
-      />
+      <CustomButton doOnPress={() => navigate("About")} buttonTitle="About this App" />
     </ScrollView>
   );
 }
@@ -94,17 +88,15 @@ function AboutScreen() {
   return (
     <View style={styles.aboutPage}>
       <Text style={styles.aboutPageText}>
-        PocketTorah is a labor of love maintained by Russel Neiss & Charlie
-        Schwartz.
+        PocketTorah is a labor of love maintained by Russel Neiss & Charlie Schwartz.
       </Text>
       <Text style={styles.aboutPageText}>
-        Initially funded by the Jewish New Media Innovation Fund, PocketTorah is
-        designed to help you learn the weekly Torah and Haftarah portions
-        anywhere, at any time, for free.
+        Initially funded by the Jewish New Media Innovation Fund, PocketTorah is designed to help
+        you learn the weekly Torah and Haftarah portions anywhere, at any time, for free.
       </Text>
       <Text style={styles.aboutPageText}>
-        If you like it, or find it useful, please consider making a donation to
-        the Jewish charity of your choice.
+        If you like it, or find it useful, please consider making a donation to the Jewish charity
+        of your choice.
       </Text>
       <Text style={styles.aboutPageHeader}>Torah Readers:</Text>
       <View>
@@ -122,9 +114,7 @@ function AboutScreen() {
   );
 }
 
-function TorahReadingsScreen({
-  navigation,
-}: ScreenProps<"TorahReadingsScreen">) {
+function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">) {
   const { navigate } = navigation;
 
   //create button for each parsha
@@ -143,10 +133,7 @@ function TorahReadingsScreen({
   );
 }
 
-function AliyahSelectScreen({
-  route,
-  navigation,
-}: ScreenProps<"AliyahSelectScreen">) {
+function AliyahSelectScreen({ route, navigation }: ScreenProps<"AliyahSelectScreen">) {
   const reading = getLeyningForParsha(route.params.parshah);
   return <AliyahSelect navigation={navigation} reading={reading} />;
 }
@@ -182,9 +169,7 @@ function AliyahSelect({ navigation, reading }: AliyahSelectProps) {
   return <ScrollView>{content}</ScrollView>;
 }
 
-function ParshahHashavuaScreen({
-  navigation,
-}: ScreenProps<"ParshahHashavuaScreen">) {
+function ParshahHashavuaScreen({ navigation }: ScreenProps<"ParshahHashavuaScreen">) {
   //figure out current parshah
   const today = new HDate();
   // const hdate = new HDate(28, 'Tamuz', 5795);
@@ -214,31 +199,28 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
   const aliyah = useMemo(() => {
     const reading = getLeyningForParsha(params.parshah);
-    const aliyah =
-      params.aliyah === "H" ? reading.haft : reading.fullkriyah[params.aliyah];
+    const aliyah = params.aliyah === "H" ? reading.haft : reading.fullkriyah[params.aliyah];
     return Array.isArray(aliyah) ? aliyah : [aliyah];
   }, [params.parshah, params.aliyah]);
 
   // in the files in data/, the maftir is in the 7th aliyah, so we need to
   // adjust for that with startingWordOffset
   const dataAliyahNum = params.aliyah === "M" ? "7" : params.aliyah;
-  const startingWordOffset =
-    params.aliyah === "M" ? maftirOffset[params.parshah] : 0;
+  const startingWordOffset = params.aliyah === "M" ? maftirOffset[params.parshah] : 0;
 
   const audio = useAudio(audioMap[params.parshah][dataAliyahNum]);
 
   const parshahBook = BOOK[parshiyot[params.parshah].book] as TorahBookName;
   const allLabels = usePromise<Labels>(labelsMap[parshahBook], [parshahBook]);
-  const labels: number[] =
-    allLabels && (allLabels as any)[params.parshah][dataAliyahNum];
+  const labels: number[] = allLabels && (allLabels as any)[params.parshah][dataAliyahNum];
 
   const book = usePromise<Book[]>(
     () => Promise.all(aliyah.map(({ k }) => bookMap[k as BookName]())),
-    [aliyah]
+    [aliyah],
   );
   const transBook = usePromise<TransBook[]>(
     () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]())),
-    [aliyah]
+    [aliyah],
   );
 
   const [textSizeMultiplier, setTextSizeMultiplier] = useState(1);
@@ -256,6 +238,14 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
     });
   }, [navigation]);
 
+  const changeAudioTime = useCallback(
+    (wordIndex: number) => {
+      var newTime = labels[wordIndex - startingWordOffset];
+      audio!.setCurrentTime(newTime);
+    },
+    [labels, startingWordOffset, audio?.setCurrentTime],
+  );
+
   if (!audio || !labels || !book || !transBook) {
     return (
       <View>
@@ -264,20 +254,11 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
       </View>
     );
   } else {
-    const changeAudioTime = (wordIndex: number) => {
-      var newTime = labels[wordIndex - startingWordOffset];
-      audio.setCurrentTime(newTime);
-    };
-
     const unBitwiseNot = (x: number) => (x < 0 ? ~x : x);
     const audioInactive = !audio.playing && audio.currentTime == 0;
     const activeWordIndex = audioInactive
       ? null
-      : unBitwiseNot(
-          binarySearch(labels, audio.currentTime, (a, b) =>
-            a === b ? -1 : a - b
-          )
-        ) -
+      : unBitwiseNot(binarySearch(labels, audio.currentTime, (a, b) => (a === b ? -1 : a - b))) -
         1 -
         startingWordOffset;
 
@@ -297,10 +278,7 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
             closeSettings={() => setModalVisible(false)}
           />
         </Modal>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 5 }}
-        >
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
             changeAudioTime={changeAudioTime}
             translationFlag={translationOn}
@@ -369,9 +347,7 @@ function PlaySettings({
             value={settingsTextSize}
             onValueChange={setSettingsTextSize}
           />
-          <Text style={getTextStyle(false, settingsTextSize)}>
-            בְּרֵאשִׁ֖ית
-          </Text>
+          <Text style={getTextStyle(false, settingsTextSize)}>בְּרֵאשִׁ֖ית</Text>
           <Text style={getTextStyle(true, settingsTextSize)}>בראשית</Text>
         </View>
         <View style={styles.modalSection}>
@@ -407,64 +383,79 @@ function PlaySettings({
   );
 }
 
-function useAudio(title: import("expo-av").AVPlaybackSource) {
-  const [audio, setAudio] = useState<Audio.Sound | null>(null);
-  const [status, setStatus] = useState<AVPlaybackStatusSuccess | null>(null);
+type Audio = {
+  currentTime: number;
+  setCurrentTime: (time: number) => void;
+  playing: boolean;
+  play: () => void;
+  pause: () => void;
+  toggle: () => void;
+  speed: number;
+  setSpeed: (speed: number) => void;
+};
+type AudioMethods = { [k in keyof Audio as Audio[k] extends Function ? k : never]: Audio[k] };
+
+function useAudio(title: import("expo-av").AVPlaybackSource): Audio | null {
+  const audio = useRef<Audio.Sound>();
+  const [methods, setMethods] = useState<AudioMethods>();
+  const [status, setStatus] = useState<AVPlaybackStatusSuccess>();
   useEffect(() => {
     let ignore = false;
-    let thisAudio: Audio.Sound | null = null;
-    Audio.Sound.createAsync(
-      title,
-      { progressUpdateIntervalMillis: __DEV__ ? 500 : 50 },
-      (status) => {
-        if (!status.isLoaded) {
-          if (status.error) console.error(status.error);
-          return;
-        }
-        setStatus(status);
+    let isPlaying = false;
+    Audio.Sound.createAsync(title, { progressUpdateIntervalMillis: 50 }, (status) => {
+      if (!status.isLoaded) {
+        if (status.error) console.error(status.error);
+        return;
       }
-    ).then(({ sound }) => {
+      isPlaying = status.isPlaying;
+      setStatus(status);
+    }).then(({ sound }) => {
       if (ignore) return;
-      setAudio(sound);
-      thisAudio = sound;
+      audio.current = sound;
+      const getAudio = () => {
+        if (!audio.current) throw new Error("audio is unloaded");
+        return audio.current;
+      };
+      setMethods(makeAudioMethods(getAudio, () => isPlaying));
     });
     return () => {
       ignore = true;
-      if (thisAudio) thisAudio.unloadAsync();
-      setAudio(null);
+      if (audio.current) audio.current.unloadAsync();
+      audio.current = undefined;
     };
   }, [title]);
-  if (!audio || !status) return null;
+  if (!methods || !status) return null;
   return {
     currentTime: status.positionMillis / 1000,
-    setCurrentTime: (time: number) => {
-      audio.setStatusAsync({ positionMillis: time * 1000, shouldPlay: true });
-    },
     playing: status.isPlaying,
-    play: () => {
-      audio.setStatusAsync({ shouldPlay: true });
-    },
-    pause: () => {
-      audio.setStatusAsync({ shouldPlay: false });
-    },
-    toggle: () => {
-      audio.setStatusAsync({ shouldPlay: !status.isPlaying });
-    },
     speed: status.rate,
-    setSpeed: (speed: number) => {
-      audio.setStatusAsync({
-        rate: speed,
-        shouldCorrectPitch: true,
-        pitchCorrectionQuality: Audio.PitchCorrectionQuality.Low,
-      });
-    },
+    ...methods,
   };
 }
 
-function usePromise<T>(
-  getProm: () => Promise<T>,
-  dependencies: React.DependencyList
-): T | null {
+const makeAudioMethods = (getAudio: () => Audio.Sound, isPlaying: () => boolean): AudioMethods => ({
+  setCurrentTime: (time: number) => {
+    getAudio().setStatusAsync({ positionMillis: time * 1000, shouldPlay: true });
+  },
+  play: () => {
+    getAudio().setStatusAsync({ shouldPlay: true });
+  },
+  pause: () => {
+    getAudio().setStatusAsync({ shouldPlay: false });
+  },
+  toggle: () => {
+    getAudio().setStatusAsync({ shouldPlay: !isPlaying() });
+  },
+  setSpeed: (speed: number) => {
+    getAudio().setStatusAsync({
+      rate: speed,
+      shouldCorrectPitch: true,
+      pitchCorrectionQuality: Audio.PitchCorrectionQuality.Low,
+    });
+  },
+});
+
+function usePromise<T>(getProm: () => Promise<T>, dependencies: React.DependencyList): T | null {
   const [result, setResult] = useState<T | null>(null);
   useEffect(() => {
     let ignore = false;
@@ -482,7 +473,7 @@ function usePromise<T>(
 
 function parseChV(s: string): [number, number] {
   const [ch, v] = s.split(":");
-  return [parseInt(ch) - 1, parseInt(v) - 1]
+  return [parseInt(ch) - 1, parseInt(v) - 1];
 }
 
 type Book = ImportType<typeof bookMap>;
@@ -497,7 +488,7 @@ type VersesProps = {
   changeAudioTime: (wordIndex: number) => void;
   textSizeMultiplier: number;
 };
-function Verses(props: VersesProps) {
+const Verses = React.memo(function Verses(props: VersesProps) {
   const { aliyah, book, transBook, translationFlag, activeWordIndex } = props;
   const verseText: React.JSX.Element[] = [];
   aliyah.forEach((aliyah, i) => {
@@ -513,25 +504,29 @@ function Verses(props: VersesProps) {
         curVerse = 0;
         continue;
       }
+      const nextWordIndex = lastWordIndex + verse.w.length;
       verseText.push(
         <Verse
           {...props}
           verse={verse}
           curWordIndex={lastWordIndex}
-          activeWordIndex={activeWordIndex}
+          // let React.memo work its magic when this Verse doesn't have the active word anyway
+          activeWordIndex={
+            activeWordIndex &&
+            (lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
+              ? activeWordIndex
+              : null)
+          }
           chapterIndex={curChapter}
           verseIndex={curVerse}
           key={`${curChapter}:${curVerse}`}
-        />
+        />,
       );
       if (translationFlag) {
         verseText.push(
-          <Text
-            key={`translation${curChapter}:${curVerse}`}
-            style={{ paddingHorizontal: 5 }}
-          >
+          <Text key={`translation${curChapter}:${curVerse}`} style={{ paddingHorizontal: 5 }}>
             {t.text[curChapter][curVerse]}
-          </Text>
+          </Text>,
         );
       }
 
@@ -541,7 +536,7 @@ function Verses(props: VersesProps) {
   });
 
   return translationFlag ? <View>{verseText}</View> : <Text>{verseText}</Text>;
-}
+});
 
 const getTextStyle = (tikkun: boolean, textSizeMultiplier: number) => [
   tikkun ? styles.stam : styles.word,
@@ -549,16 +544,16 @@ const getTextStyle = (tikkun: boolean, textSizeMultiplier: number) => [
 ];
 
 type VerseProps = {
-  tikkunFlag: boolean,
-  changeAudioTime: (wordIndex: number) => void,
-  textSizeMultiplier: number,
-  curWordIndex: number,
-  chapterIndex: number,
-  verseIndex: number,
-  verse: NonNullable<Book['Tanach']['tanach']['book']['c'][0]>['v'][0],
-  activeWordIndex: number | null,
+  tikkunFlag: boolean;
+  changeAudioTime: (wordIndex: number) => void;
+  textSizeMultiplier: number;
+  curWordIndex: number;
+  chapterIndex: number;
+  verseIndex: number;
+  verse: NonNullable<Book["Tanach"]["tanach"]["book"]["c"][0]>["v"][0];
+  activeWordIndex: number | null;
 };
-function Verse(props: VerseProps) {
+const Verse = React.memo(function Verse(props: VerseProps) {
   const {
     tikkunFlag,
     changeAudioTime,
@@ -580,10 +575,7 @@ function Verse(props: VerseProps) {
       </Text>
     );
     return (
-      <TouchableOpacity
-        key={wordIndex}
-        onPress={() => changeAudioTime(wordIndex)}
-      >
+      <TouchableOpacity key={wordIndex} onPress={() => changeAudioTime(wordIndex)}>
         {i == 0 ? (
           <Text style={textStyle[0]}>
             <View style={styles.verseNumWrapper}>
@@ -606,7 +598,7 @@ function Verse(props: VerseProps) {
       {words}
     </Text>
   );
-}
+});
 
 // const PocketTorah = StackNavigator({
 //   Home: { screen: HomeScreen },
@@ -630,10 +622,7 @@ type Params = {
   };
 };
 type AliyahNum = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "M" | "H";
-type ScreenProps<RouteName extends keyof Params> = StackScreenProps<
-  Params,
-  RouteName
->;
+type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
 
 const Stack = createStackNavigator<Params>();
 
@@ -650,21 +639,32 @@ const Stack = createStackNavigator<Params>();
 // };
 
 const App = () => (
-  <NavigationContainer documentTitle={{ formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}` }}>
-   <Stack.Navigator initialRouteName="Home">
-     <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-     <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
-     <Stack.Screen name="TorahReadingsScreen" component={TorahReadingsScreen} options={{ title: 'Torah Readings' }} />
-     <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
-     <Stack.Screen name="ParshahHashavuaScreen" component={ParshahHashavuaScreen} />
-     <Stack.Screen name="PlayViewScreen" component={PlayViewScreen} options={({ route }) => ({
+  <NavigationContainer
+    documentTitle={{
+      formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}`,
+    }}
+  >
+    <Stack.Navigator initialRouteName="Home">
+      <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Home" }} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
+      <Stack.Screen
+        name="TorahReadingsScreen"
+        component={TorahReadingsScreen}
+        options={{ title: "Torah Readings" }}
+      />
+      <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
+      <Stack.Screen name="ParshahHashavuaScreen" component={ParshahHashavuaScreen} />
+      <Stack.Screen
+        name="PlayViewScreen"
+        component={PlayViewScreen}
+        options={({ route }) => ({
           title: `${route.params.parshah}`,
           cardStyle: { maxHeight: "100%" },
-      })} />
-   </Stack.Navigator>
+        })}
+      />
+    </Stack.Navigator>
   </NavigationContainer>
 );
-
 
 const styles = StyleSheet.create({
   container: {
@@ -697,18 +697,12 @@ const styles = StyleSheet.create({
   word: {
     flex: 0,
     padding: 4,
-    fontFamily: platformSelect(
-      { android: "TaameyFrank-taamim-fix" },
-      "Taamey Frank Taamim Fix"
-    ),
+    fontFamily: platformSelect({ android: "TaameyFrank-taamim-fix" }, "Taamey Frank Taamim Fix"),
   },
   stam: {
     flex: 0,
     padding: 4,
-    fontFamily: platformSelect(
-      { android: "stamashkenazclm-webfont" },
-      "Stam Ashkenaz CLM"
-    ),
+    fontFamily: platformSelect({ android: "stamashkenazclm-webfont" }, "Stam Ashkenaz CLM"),
   },
   active: {
     backgroundColor: "#ffff9d",

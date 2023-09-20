@@ -21,7 +21,7 @@ export const bookMap = {
   "I Samuel": () => import("../data/torah/json/Samuel_1.json"),
   "II Samuel": () => import("../data/torah/json/Samuel_2.json"),
   Zechariah: () => import("../data/torah/json/Zechariah.json"),
-}
+};
 
 export const transBookMap = {
   // Import Translations
