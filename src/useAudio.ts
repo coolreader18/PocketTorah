@@ -19,19 +19,24 @@ export interface Audio {
   speed: number;
   setSpeed: (speed: number) => void;
 }
+
 type AudioMethods = {
   [k in keyof Audio as Audio[k] extends Function ? k : never]: Audio[k];
 };
+
 type SetStatusAsync = (status: AVPlaybackStatusToSet) => Promise<AVPlaybackStatus>;
+
 type Status = Pick<AVPlaybackStatusSuccess, "positionMillis" | "isPlaying" | "rate"> & {
   isLoaded: boolean;
 };
+
 const defaultStatus = {
   positionMillis: 0,
   isPlaying: false,
   rate: 1,
   isLoaded: false,
 };
+
 export function useAudio<T extends AVPlaybackSource | null>(
   title: T,
 ): T extends AVPlaybackSource ? Audio : null;

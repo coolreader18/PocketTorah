@@ -6,45 +6,25 @@
  * @flow strict-local
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Button,
-  Modal,
-  TextStyle,
-  ViewStyle,
-} from "react-native";
-import Slider from "@react-native-community/slider";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
 
-import { NavigationContainer } from "@react-navigation/native";
-import {
-  StackNavigationProp,
-  StackScreenProps,
-  createStackNavigator,
-} from "@react-navigation/stack";
+import { NavigationContainer, getPathFromState, getStateFromPath } from "@react-navigation/native";
+import { StackScreenProps, createStackNavigator } from "@react-navigation/stack";
 
 import maftirOffset from "../data/maftirOffset.json";
-import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
-import {
-  getLeyningOnDate,
-  getLeyningForParsha,
-  formatAliyahShort,
-  parshiyot,
-  BOOK,
-  Leyning,
-  Aliyah,
-} from "@hebcal/leyning";
+import { HDate, HebrewCalendar, parshiot as hebcalParshiot } from "@hebcal/core";
+import { getLeyningOnDate, getLeyningForParsha, formatAliyahShort, Leyning } from "@hebcal/leyning";
 
-import { audio as audioMap, labels as labelsMap, bookMap, transBookMap } from "./assetImports";
+import { audio as audioMap, fonts } from "./assetImports";
 
-import binarySearch from "binary-search";
-import { platformSelect, usePromise } from "./utils";
-import { useAudio } from "./useAudio";
+import { platformSelect } from "./utils";
+import { PlayViewScreen } from "./PlayViewScreen";
+import { Calendar } from "react-native-calendars";
+import { MarkedDates } from "react-native-calendars/src/types";
+import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
+import { toMarkingFormat } from "react-native-calendars/src/interface";
+import { useFonts } from "expo-font";
 
 type CustomButtonProps = {
   onPress?: () => void;
@@ -53,7 +33,7 @@ type CustomButtonProps = {
   disabled?: boolean;
 };
 
-function CustomButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
+export function CustomButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
   return (
     <TouchableOpacity onPress={onPress} style={style} disabled={disabled}>
       <Text style={styles.button}>{buttonTitle}</Text>
@@ -61,7 +41,7 @@ function CustomButton({ onPress, style, buttonTitle, disabled }: CustomButtonPro
   );
 }
 
-function FooterButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
+export function FooterButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -93,6 +73,7 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
         }}
         buttonTitle="This Week's Torah Readings"
       />
+      <CustomButton onPress={() => navigate("CalendarScreen")} buttonTitle="Calendar of Readings" />
       <CustomButton onPress={() => navigate("About")} buttonTitle="About this App" />
     </ScrollView>
   );
@@ -156,15 +137,23 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
     navigation.setOptions({ title: reading.name.en });
   }, [navigation, reading.name.en]);
 
-  const content = aliyahNums.map((num) => (
-    <CustomButton
-      key={num}
-      onPress={() => navigation.navigate("PlayViewScreen", { readingId, aliyah: num })}
-      buttonTitle={`${aliyahName(num)}: ${
-        num === "H" ? reading.haftara : formatAliyahShort(reading.fullkriyah[num], false)
-      }`}
-    />
-  ));
+  const kriyah = reading.fullkriyah ?? reading.weekday!;
+  const namePrefix = reading.fullkriyah ? "" : "Weekday ";
+  const special = !reading.parsha;
+
+  const content = aliyahNums
+    .filter((num) => num in kriyah || (num === "H" && reading.haftara))
+    .map((num) => (
+      <CustomButton
+        key={num}
+        onPress={() => navigation.navigate("PlayViewScreen", { readingId, aliyah: num })}
+        buttonTitle={`${namePrefix}${aliyahName(num)}: ${
+          num === "H"
+            ? reading.haftara
+            : formatAliyahShort(kriyah[num], special || kriyah[num].k != kriyah[1].k)
+        }`}
+      />
+    ));
   return <ScrollView>{content}</ScrollView>;
 }
 
@@ -173,7 +162,7 @@ const aliyahName = (num: AliyahNum) =>
 
 const isParshah = (x: string): x is Parshah => x in audioMap;
 
-const getLeyning = (readingId: ReadingId): Leyning => {
+export const getLeyning = (readingId: ReadingId): Leyning => {
   if (isParshah(readingId)) {
     return getLeyningForParsha(readingId);
   } else {
@@ -183,396 +172,77 @@ const getLeyning = (readingId: ReadingId): Leyning => {
   }
 };
 
+declare module "@hebcal/leyning" {
+  export function getLeyningOnDate(hdate: HDate, il: boolean, wantarray?: false): Leyning;
+  export function getLeyningOnDate(hdate: HDate, il: boolean, wantarray: true): Leyning[];
+}
+
 const dateToStr = (date: HDate) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` as const;
+
 const dateFromStr = (str: string): HDate | null => {
   const m = /^(\d+)-(\d+)-(\d+)$/.exec(str);
   if (!m) return null;
   return m && new HDate(+m[3], +m[2], +m[1]);
 };
 
-type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
-  ImportMap<T>[keyof ImportMap<T>];
-type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
-  [k in keyof T]: Awaited<ReturnType<T[k]>>["default"];
-};
-type ObjValues<T> = T extends T ? T[keyof T] : never;
-type Labels = ImportType<typeof labelsMap>;
-type Parshah = keyof typeof maftirOffset;
-type TorahBookName = keyof typeof labelsMap;
-type BookName = keyof typeof transBookMap;
+export type Parshah = keyof typeof maftirOffset;
 
-const getReading = (leyning: Leyning, num: AliyahNum) => {
-  const aliyah = num === "H" ? leyning.haft : leyning.fullkriyah[num];
-  return Array.isArray(aliyah) ? aliyah : [aliyah];
-};
-
-function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
-  const { params } = route;
-  const leyning = useMemo(() => getLeyning(params.readingId), [params.readingId]);
-  const aliyah = getReading(leyning, params.aliyah);
-
-  const key = params.aliyah + leyning.name.en;
-
-  useEffect(() => {
-    navigation.setOptions({ title: leyning.name.en });
-  }, [navigation, key]);
-
-  // in the files in data/, the maftir is in the 7th aliyah, so we need to
-  // adjust for that with startingWordOffset
-  const dataAliyahNum = params.aliyah === "M" ? "7" : params.aliyah;
-
-  const parshah = leyning.parsha?.length == 1 ? (leyning.parsha[0] as Parshah) : null;
-
-  const hebcalNum = params.aliyah == "H" ? "haftara" : params.aliyah;
-  const haveAudio = parshah != null && (leyning.reason == null || !(hebcalNum in leyning.reason));
-  const audio = useAudio(haveAudio ? audioMap[parshah][dataAliyahNum] : null);
-
-  const startingWordOffset = haveAudio && params.aliyah === "M" ? maftirOffset[parshah] : 0;
-
-  const labelsPromise: Promise<number[]> = useMemo(async () => {
-    if (!haveAudio) return await Promise.race([]);
-    const parshahBook = BOOK[parshiyot[parshah].book] as TorahBookName;
-    const { default: labels } = await labelsMap[parshahBook]();
-    return (labels as any)[parshah]![dataAliyahNum];
-  }, [key]);
-  const labels = usePromise(() => labelsPromise, [key]);
-
-  const book = usePromise<Book[]>(
-    () => Promise.all(aliyah.map(({ k }) => bookMap[k as BookName]())),
-    [key],
-  );
-  const transBook = usePromise<TransBook[]>(
-    // ok micah
-    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]?.())),
-    [key],
-  );
-
-  const [textSizeMultiplier, setTextSizeMultiplier] = useState(1);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [translationOn, setTranslationOn] = useState(false);
-  const [tikkunOn, setTikkunOn] = useState(false);
-
-  const wordStyle = useMemo(
-    () => getWordStyle(tikkunOn, textSizeMultiplier),
-    [tikkunOn, textSizeMultiplier],
-  );
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={{ marginRight: 5 }}>
-          <Button title="Settings" onPress={() => setModalVisible(true)} />
-        </View>
-      ),
-    });
-  }, [navigation]);
-
-  const changeAudioTime = useMemo(
-    () =>
-      audio
-        ? async (wordIndex: number) => {
-            var newTime = (await labelsPromise)[wordIndex - startingWordOffset];
-            audio.setCurrentTime(newTime);
-          }
-        : undefined,
-    [labelsPromise, startingWordOffset, audio?.setCurrentTime],
-  );
-
-  if (!book || (!translationOn && !transBook)) {
-    return (
-      <View>
-        <ActivityIndicator size="large" />
-        <Text>Loading....</Text>
-      </View>
-    );
-  } else {
-    const unBitwiseNot = (x: number) => (x < 0 ? ~x : x);
-    const audioInactive = audio == null || (!audio.playing && audio.currentTime == 0);
-    const activeWordIndex =
-      audioInactive || !labels
-        ? null
-        : unBitwiseNot(binarySearch(labels, audio.currentTime, (a, b) => (a === b ? -1 : a - b))) -
-          1 -
-          startingWordOffset;
-
-    return (
-      <View style={{ flex: 1, maxHeight: "100%" }}>
-        <Modal
-          animationType={"slide"}
-          transparent={false}
-          visible={modalVisible}
-          onRequestClose={() => console.log("Modal has been closed.")}
-        >
-          <PlaySettings
-            textSizeMultiplier={textSizeMultiplier}
-            setTextSizeMultiplier={setTextSizeMultiplier}
-            audioSpeed={audio?.speed}
-            setAudioSpeed={audio?.setSpeed}
-            closeSettings={() => setModalVisible(false)}
-          />
-        </Modal>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 5 }}>
-          <Verses
-            changeAudioTime={changeAudioTime}
-            wordStyle={wordStyle}
-            activeWordIndex={activeWordIndex}
-            book={book}
-            transBook={translationOn ? transBook : null}
-            aliyah={aliyah}
-          />
-        </ScrollView>
-        <View style={styles.footer}>
-          {audio && changeAudioTime ? (
-            <FooterButton
-              onPress={() => {
-                if (audioInactive) {
-                  changeAudioTime(0);
-                } else {
-                  audio.toggle();
-                }
-              }}
-              buttonTitle={audio.loaded ? (audio.playing ? "Pause" : "Play") : "Audio loading..."}
-              disabled={!audio.loaded}
-            />
-          ) : (
-            <FooterButton buttonTitle="No audio for aliyah" disabled={true} />
-          )}
-          <FooterButton
-            onPress={() => setTranslationOn((b) => !b)}
-            buttonTitle={translationOn ? "Translation Off" : "Translation On"}
-          />
-          <FooterButton
-            onPress={() => setTikkunOn((b) => !b)}
-            buttonTitle={tikkunOn ? "Tikkun Off" : "Tikkun On"}
-          />
-        </View>
-      </View>
-    );
-  }
-}
-
-type PlaySettingsProps = {
-  textSizeMultiplier: number;
-  setTextSizeMultiplier: (v: number) => void;
-  audioSpeed?: number;
-  setAudioSpeed?: (v: number) => void;
-  closeSettings: () => void;
-};
-function PlaySettings({
-  textSizeMultiplier,
-  setTextSizeMultiplier,
-  audioSpeed,
-  setAudioSpeed,
-  closeSettings,
-}: PlaySettingsProps) {
-  const [settingsTextSize, setSettingsTextSize] = useState(textSizeMultiplier);
-  const [savedAudioSpeed, setSavedAudioSpeed] = useState(audioSpeed ?? 1);
-
-  const breishit = "בְּרֵאשִׁ֖ית";
+function CalendarScreen({ navigation }: ScreenProps<"CalendarScreen">) {
+  const [year, setYear] = useState(() => new Date().getFullYear());
   return (
-    <View style={{ marginTop: 22 }}>
-      <View>
-        <Text style={styles.modalHeader}>Settings</Text>
-        <View style={styles.modalSection}>
-          <Text>Font Size:</Text>
-          <Slider
-            minimumValue={0.5}
-            maximumValue={2}
-            value={settingsTextSize}
-            onValueChange={setSettingsTextSize}
-          />
-          <Word word={breishit} wordStyle={getWordStyle(false, settingsTextSize)} />
-          <Word word={breishit} wordStyle={getWordStyle(true, settingsTextSize)} />
-        </View>
-        {audioSpeed != null && setAudioSpeed != null && (
-          <View style={styles.modalSection}>
-            <Text>Set Audio Speed:</Text>
-            <Slider
-              minimumValue={0.5}
-              maximumValue={2}
-              value={audioSpeed}
-              onValueChange={setAudioSpeed}
-            />
-          </View>
-        )}
-
-        <View style={styles.modalFooter}>
-          <CustomButton
-            onPress={() => {
-              if (audioSpeed != null) setSavedAudioSpeed(audioSpeed);
-              setTextSizeMultiplier(settingsTextSize);
-              closeSettings();
-            }}
-            buttonTitle="Save Settings"
-          />
-          <CustomButton
-            onPress={() => {
-              if (setAudioSpeed) setAudioSpeed(savedAudioSpeed);
-              setSettingsTextSize(textSizeMultiplier);
-              closeSettings();
-            }}
-            buttonTitle="Cancel"
-          />
-        </View>
-      </View>
-    </View>
+    <Calendar
+      disableAllTouchEventsForDisabledDays={true}
+      disabledByDefault={true}
+      markedDates={getMarkedDates(year)}
+      onMonthChange={({ month, year }) => {
+        setYear(year);
+        if (month <= 2) Promise.resolve().then(() => fillMarkedDatesCache(year - 1));
+        else if (month >= 11) Promise.resolve().then(() => fillMarkedDatesCache(year + 1));
+      }}
+      onDayPress={({ year, month, day }) => {
+        navigation.navigate("AliyahSelectScreen", {
+          readingId: dateToStr(new HDate(new Date(year, month - 1, day))),
+        });
+      }}
+    />
   );
 }
 
-function parseChV(s: string): [number, number] {
-  const [ch, v] = s.split(":");
-  return [parseInt(ch) - 1, parseInt(v) - 1];
-}
-
-type Book = ImportType<typeof bookMap>;
-type TransBook = ImportType<typeof transBookMap>;
-type VersesProps = {
-  aliyah: Aliyah[];
-  book: Book[];
-  transBook: TransBook[] | null;
-  activeWordIndex: number | null;
-  changeAudioTime: ((wordIndex: number) => void) | undefined;
-  wordStyle: WordStyle;
-};
-const Verses = React.memo(function Verses(props: VersesProps) {
-  const { aliyah, book, transBook, activeWordIndex } = props;
-  const verseText: React.JSX.Element[] = [];
-  aliyah.forEach((aliyah, i) => {
-    const b = book[i].Tanach.tanach.book;
-    let lastWordIndex = 0;
-    let [curChapter, curVerse] = parseChV(aliyah.b);
-    const [endChapter, endVerse] = parseChV(aliyah.e);
-    while (!(curChapter == endChapter && curVerse == endVerse)) {
-      const verse = b.c[curChapter]!.v[curVerse];
-      if (verse == null) {
-        curChapter = curChapter + 1;
-        curVerse = 0;
-        continue;
-      }
-      const nextWordIndex = lastWordIndex + verse.w.length;
-      verseText.push(
-        <Verse
-          {...props}
-          verse={verse}
-          curWordIndex={lastWordIndex}
-          // let React.memo work its magic when this Verse doesn't have the active word anyway
-          activeWordIndex={
-            activeWordIndex == null
-              ? null
-              : lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
-              ? activeWordIndex
-              : null
-          }
-          chapterIndex={curChapter}
-          verseIndex={curVerse}
-          key={`${curChapter}:${curVerse}`}
-        />,
-      );
-      if (transBook) {
-        verseText.push(
-          <Text key={`translation${curChapter}:${curVerse}`} style={{ paddingHorizontal: 5 }}>
-            {transBook[i]?.text[curChapter][curVerse]}
-          </Text>,
-        );
-      }
-
-      lastWordIndex += verse.w.length;
-      curVerse++;
+const markedDatesCache: MarkedDates = {};
+const markedYears: { [y: number]: true } = Object.create(null);
+const fillMarkedDatesCache = (year: number) => {
+  if (markedYears[year]) return;
+  const endDate = new HDate(new Date(year, 11, 31));
+  for (
+    let date = new HDate(new Date(year, 0, 1));
+    date.abs() <= endDate.abs();
+    date = date.next()
+  ) {
+    const l = getLeyningOnDate(date, false);
+    if (l) {
+      markedDatesCache[toMarkingFormat(date.greg())] = leyningToProps(l);
     }
-  });
-
-  return transBook ? <View>{verseText}</View> : <Text>{verseText}</Text>;
-});
-
-const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) =>
-  ({
-    deleteRegex: tikkun ? /[\/\u0591-\u05C7]/g : /\//g,
-    style: [
-      tikkun ? styles.stam : styles.word,
-      { fontSize: (tikkun ? 30 : 36) * textSizeMultiplier },
-    ],
-  }) as const;
-type WordStyle = ReturnType<typeof getWordStyle>;
-
-type VerseProps = {
-  changeAudioTime: ((wordIndex: number) => void) | undefined;
-  wordStyle: WordStyle;
-  curWordIndex: number;
-  chapterIndex: number;
-  verseIndex: number;
-  verse: NonNullable<Book["Tanach"]["tanach"]["book"]["c"][0]>["v"][0];
-  activeWordIndex: number | null;
+  }
 };
-const Verse = React.memo(function Verse(props: VerseProps) {
-  const {
-    changeAudioTime,
-    wordStyle,
-    curWordIndex,
-    chapterIndex,
-    verseIndex,
-    verse,
-    activeWordIndex,
-  } = props;
-  var words = verse.w.map((word, i) => {
-    const wordIndex = curWordIndex + i;
-    return (
-      <Word
-        key={wordIndex}
-        wordIndex={wordIndex}
-        active={wordIndex === activeWordIndex}
-        verseNum={i === 0 ? `${chapterIndex + 1}:${verseIndex + 1}` : undefined}
-        word={word as string}
-        wordStyle={wordStyle}
-        changeAudioTime={changeAudioTime}
-      />
-    );
-  });
-
-  return (
-    <Text>
-      <Text key="rtl">{"\u200F"}</Text>
-      {words}
-    </Text>
-  );
+const leyningToProps = (leyning: Leyning): MarkingProps => ({
+  marked: true,
+  disabled: false,
+  dotColor:
+    leyning.parsha == null
+      ? "red"
+      : leyning.weekday
+      ? "green"
+      : leyning.reason
+      ? "blue"
+      : "darkblue",
 });
-
-type Maybe<T> = T | { [k in keyof T]?: never };
-type MaybeAnd<T, U> = (Maybe<T> & { [k in keyof U]?: never }) | (T & Maybe<U>);
-type WordIndexInfo = MaybeAnd<
-  { wordIndex: number },
-  { changeAudioTime: (wordIndex: number) => void }
->;
-type WordProps = WordIndexInfo & {
-  wordStyle: WordStyle;
-  word: string;
-  verseNum?: string;
-  active?: boolean;
+const getMarkedDates = (year: number) => {
+  fillMarkedDatesCache(year);
+  return { ...markedDatesCache };
 };
-function Word({ word, wordStyle, verseNum, active, wordIndex, changeAudioTime }: WordProps) {
-  const wordElem = (
-    <Text style={[wordStyle.style, active && styles.active]}>
-      {word.replace(wordStyle.deleteRegex, "")}
-    </Text>
-  );
-  return (
-    <TouchableOpacity
-      onPress={changeAudioTime && (() => changeAudioTime(wordIndex))}
-      disabled={!changeAudioTime}
-    >
-      {verseNum ? (
-        <Text style={wordStyle.style[0]}>
-          <View style={styles.verseNumWrapper}>
-            <Text style={styles.verseNum}>{verseNum}</Text>
-          </View>
-          {wordElem}
-        </Text>
-      ) : (
-        wordElem
-      )}
-    </TouchableOpacity>
-  );
-}
+
+// const calculateDates =
 
 // const PocketTorah = StackNavigator({
 //   Home: { screen: HomeScreen },
@@ -586,6 +256,7 @@ type Params = {
   Home: undefined;
   About: undefined;
   TorahReadingsScreen: undefined;
+  CalendarScreen: undefined;
   AliyahSelectScreen: {
     readingId: ReadingId;
   };
@@ -596,48 +267,72 @@ type Params = {
 };
 type ReadingId = Parshah | `${number}-${number}-${number}`;
 const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
-type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
-type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
+export type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
+export type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
 
 const Stack = createStackNavigator<Params>();
 
-// const linking = {
-//   config: {
-//     screens: {
-//       Home: "/",
-//       About: "/?about",
-//       TorahReadingsScreen: "/?books",
-//       AliyahSelectScreen: "/?parshah/:parshah",
-//       PlayViewScreen: "/?parsha=:parsha"
-//     },
-//   },
-// };
+const linkingConfig: import("@react-navigation/native").LinkingOptions<Params>["config"] = {
+  screens: {
+    Home: "/",
+    About: "/about",
+    TorahReadingsScreen: "/books",
+    CalendarScreen: "/calendar",
+    AliyahSelectScreen: "/reading/:readingId",
+    PlayViewScreen: "/reading/:readingId/:aliyah",
+  },
+};
+const linking: import("@react-navigation/native").LinkingOptions<Params> = {
+  prefixes: [],
+  config: linkingConfig,
+  getStateFromPath: (path, options) => {
+    const config = getStateFromPath(rmPrefix(path), options);
+    if (config) {
+      for (const route of config.routes) {
+        if (route.path != null) (route as any).path = addPrefix(route.path);
+      }
+    }
+    return config;
+  },
+  getPathFromState: (state, options) => {
+    return addPrefix(getPathFromState(state, options));
+  },
+};
+const urlPrefix = "/?";
+const rmPrefix = (s: string) => (s.startsWith(urlPrefix) ? "/" + s.slice(urlPrefix.length) : s);
+const addPrefix = (s: string) =>
+  s.startsWith(urlPrefix) || s === "/" ? s : urlPrefix + s.slice(1);
 
-const App = () => (
-  <NavigationContainer
-    documentTitle={{
-      formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}`,
-    }}
-  >
-    <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Home" }} />
-      <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
-      <Stack.Screen
-        name="TorahReadingsScreen"
-        component={TorahReadingsScreen}
-        options={{ title: "Torah Readings" }}
-      />
-      <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
-      <Stack.Screen
-        name="PlayViewScreen"
-        component={PlayViewScreen}
-        options={({ route }) => ({ cardStyle: { maxHeight: "100%" } })}
-      />
-    </Stack.Navigator>
-  </NavigationContainer>
-);
+const App = () => {
+  useFonts(fonts);
+  return (
+    <NavigationContainer
+      linking={linking}
+      documentTitle={{
+        formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}`,
+      }}
+    >
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Home" }} />
+        <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
+        <Stack.Screen
+          name="TorahReadingsScreen"
+          component={TorahReadingsScreen}
+          options={{ title: "Torah Readings" }}
+        />
+        <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
+        <Stack.Screen
+          name="PlayViewScreen"
+          component={PlayViewScreen}
+          options={{ cardStyle: { maxHeight: "100%" } }}
+        />
+        <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
@@ -668,12 +363,12 @@ const styles = StyleSheet.create({
   word: {
     flex: 0,
     padding: 4,
-    fontFamily: platformSelect({ android: "TaameyFrank-taamim-fix" }, "Taamey Frank Taamim Fix"),
+    fontFamily: "Taamey Frank Taamim Fix",
   },
   stam: {
     flex: 0,
     padding: 4,
-    fontFamily: platformSelect({ android: "stamashkenazclm-webfont" }, "Stam Ashkenaz CLM"),
+    fontFamily: "Stam Ashkenaz CLM",
   },
   active: {
     backgroundColor: "#ffff9d",

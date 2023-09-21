@@ -576,7 +576,7 @@ export const audio = {
     7: require("../data/audio/Vayeilech-7.mp3"),
     H: require("../data/audio/Vayeilech-H.mp3"),
   },
-  "Ha'Azinu": {
+  "Ha'azinu": {
     1: require("../data/audio/Haazinu-1.mp3"),
     2: require("../data/audio/Haazinu-2.mp3"),
     3: require("../data/audio/Haazinu-3.mp3"),
@@ -596,4 +596,9 @@ export const audio = {
     7: require("../data/audio/VezotHaberakhah-7.mp3"),
     H: require("../data/audio/VezotHaberakhah-H.mp3"),
   },
+};
+
+export const fonts = {
+  "Taamey Frank Taamim Fix": require("../fonts/TaameyFrank-taamim-fix.ttf"),
+  "Stam Ashkenaz CLM": require("../fonts/stamashkenazclm-webfont.ttf"),
 };

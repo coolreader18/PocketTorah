@@ -1,6 +1,7 @@
 const HtmlBundlerPlugin = require("html-bundler-webpack-plugin");
 const path = require("path");
 const webpack = require("webpack");
+const { SCALABLE_ASSETS } = require("@callstack/repack/dist/webpack/utils/assetExtensions.js");
 
 const appDirectory = path.resolve(__dirname, "../");
 
@@ -16,6 +17,8 @@ const babelLoaderConfiguration = {
     path.resolve(appDirectory, "web"),
     path.resolve(appDirectory, "src"),
     path.resolve(appDirectory, "node_modules/react-native-uncompiled"),
+    path.resolve(appDirectory, "node_modules/react-native-calendars"),
+    path.resolve(appDirectory, "node_modules/react-native-swipe-gestures"),
   ],
   use: {
     loader: "babel-loader",
@@ -32,12 +35,14 @@ const babelLoaderConfiguration = {
 // This is needed for webpack to import static images in JavaScript files.
 const imageLoaderConfiguration = {
   test: /\.(gif|jpe?g|png|svg|mp3|ttf)$/,
-  type: "asset",
+  use: {
+    loader: "@callstack/repack/assets-loader",
+    options: { platform: "web", scalableAssetExtensions: SCALABLE_ASSETS },
+  },
 };
 
 /** @returns {webpack.Configuration} */
 module.exports = (env) => ({
-
   // configures where the build ends up
   output: {
     path: path.resolve(appDirectory, "dist"),
