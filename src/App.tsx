@@ -6,7 +6,7 @@
  * @flow strict-local
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -16,6 +16,8 @@ import {
   ActivityIndicator,
   Button,
   Modal,
+  TextStyle,
+  ViewStyle,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 
@@ -41,26 +43,31 @@ import {
 import { audio as audioMap, labels as labelsMap, bookMap, transBookMap } from "./assetImports";
 
 import binarySearch from "binary-search";
-import { Audio, AVPlaybackStatusSuccess } from "expo-av";
-import { platformSelect } from "./utils";
+import { platformSelect, usePromise } from "./utils";
+import { useAudio } from "./useAudio";
 
 type CustomButtonProps = {
-  doOnPress?: () => void;
+  onPress?: () => void;
   style?: object;
   buttonTitle: string;
+  disabled?: boolean;
 };
 
-function CustomButton({ doOnPress, style, buttonTitle }: CustomButtonProps) {
+function CustomButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
   return (
-    <TouchableOpacity onPress={doOnPress} style={style}>
+    <TouchableOpacity onPress={onPress} style={style} disabled={disabled}>
       <Text style={styles.button}>{buttonTitle}</Text>
     </TouchableOpacity>
   );
 }
 
-function FooterButton({ doOnPress, style, buttonTitle }: CustomButtonProps) {
+function FooterButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
   return (
-    <TouchableOpacity onPress={doOnPress} style={style}>
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.footerButton, disabled && { opacity: 0.5 }, style]}
+      disabled={disabled}
+    >
       <Text style={styles.footerButtonInner}>{buttonTitle}</Text>
     </TouchableOpacity>
   );
@@ -72,14 +79,21 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
   return (
     <ScrollView>
       <CustomButton
-        doOnPress={() => navigate("TorahReadingsScreen")}
+        onPress={() => navigate("TorahReadingsScreen")}
         buttonTitle="List of Torah Readings"
       />
       <CustomButton
-        doOnPress={() => navigate("ParshahHashavuaScreen")}
+        onPress={() => {
+          const hdate = new HDate();
+          // const hdate = new HDate(28, "elul", 5783);
+          // const hdate = new HDate(28, 'Tamuz', 5795);
+          // const hdate = new HDate(19, 'Tishrei', 5783);
+          const saturday = hdate.onOrAfter(6);
+          navigate("AliyahSelectScreen", { readingId: dateToStr(saturday) });
+        }}
         buttonTitle="This Week's Torah Readings"
       />
-      <CustomButton doOnPress={() => navigate("About")} buttonTitle="About this App" />
+      <CustomButton onPress={() => navigate("About")} buttonTitle="About this App" />
     </ScrollView>
   );
 }
@@ -118,10 +132,10 @@ function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">)
   const { navigate } = navigation;
 
   //create button for each parsha
-  var content = hebcalParshiot.map((parshah) => (
+  var content = (hebcalParshiot as Parshah[]).map((parshah) => (
     <CustomButton
       key={parshah}
-      doOnPress={() => navigate("AliyahSelectScreen", { parshah })}
+      onPress={() => navigate("AliyahSelectScreen", { readingId: parshah })}
       buttonTitle={parshah}
     />
   ));
@@ -133,100 +147,116 @@ function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">)
   );
 }
 
-function AliyahSelectScreen({ route, navigation }: ScreenProps<"AliyahSelectScreen">) {
-  const reading = getLeyningForParsha(route.params.parshah);
-  return <AliyahSelect navigation={navigation} reading={reading} />;
-}
+function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScreen">) {
+  const { readingId } = route.params;
 
-type AliyahSelectProps = {
-  navigation: StackNavigationProp<Params>;
-  reading: Leyning;
-};
-
-function AliyahSelect({ navigation, reading }: AliyahSelectProps) {
-  const { navigate } = navigation;
-  const parshah = reading.name.en as Parshah;
+  const reading = useMemo(() => getLeyning(readingId), [readingId]);
 
   useEffect(() => {
-    navigation.setOptions({ title: parshah });
-  }, [navigation]);
+    navigation.setOptions({ title: reading.name.en });
+  }, [navigation, reading.name.en]);
 
-  const readings = Object.entries(reading.fullkriyah).map(([num, aliyah]) => {
-    const aliyahName = num === "M" ? "Maftir Aliyah" : `Aliyah ${num}`;
-    return {
-      num: num as AliyahNum,
-      buttonTitle: `${aliyahName}: ${formatAliyahShort(aliyah, false)}`,
-    };
-  });
-  readings.push({ num: "H", buttonTitle: `Haftarah: ${reading.haftara}` });
-  const content = readings.map(({ num, buttonTitle }) => (
+  const content = aliyahNums.map((num) => (
     <CustomButton
       key={num}
-      doOnPress={() => navigate("PlayViewScreen", { parshah, aliyah: num })}
-      buttonTitle={buttonTitle}
+      onPress={() => navigation.navigate("PlayViewScreen", { readingId, aliyah: num })}
+      buttonTitle={`${aliyahName(num)}: ${
+        num === "H" ? reading.haftara : formatAliyahShort(reading.fullkriyah[num], false)
+      }`}
     />
   ));
   return <ScrollView>{content}</ScrollView>;
 }
 
-function ParshahHashavuaScreen({ navigation }: ScreenProps<"ParshahHashavuaScreen">) {
-  //figure out current parshah
-  const today = new HDate();
-  // const hdate = new HDate(28, 'Tamuz', 5795);
-  // const hdate = new HDate(19, 'Tishrei', 5783);
-  let saturday = today.onOrAfter(6);
-  let reading;
-  // find the next shabbat reading that is not a holiday (we don't have those readings)
-  do {
-    reading = getLeyningOnDate(saturday, false);
-    saturday = saturday.add(1, "week");
-  } while (reading.parsha == null);
+const aliyahName = (num: AliyahNum) =>
+  num === "M" ? "Maftir Aliyah" : num == "H" ? "Haftarah" : `Aliyah ${num}`;
 
-  return <AliyahSelect navigation={navigation} reading={reading} />;
-}
+const isParshah = (x: string): x is Parshah => x in audioMap;
+
+const getLeyning = (readingId: ReadingId): Leyning => {
+  if (isParshah(readingId)) {
+    return getLeyningForParsha(readingId);
+  } else {
+    const d = dateFromStr(readingId);
+    if (!d) throw new Error("bad date");
+    return getLeyningOnDate(d, false);
+  }
+};
+
+const dateToStr = (date: HDate) =>
+  `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` as const;
+const dateFromStr = (str: string): HDate | null => {
+  const m = /^(\d+)-(\d+)-(\d+)$/.exec(str);
+  if (!m) return null;
+  return m && new HDate(+m[3], +m[2], +m[1]);
+};
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];
 type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
   [k in keyof T]: Awaited<ReturnType<T[k]>>["default"];
 };
+type ObjValues<T> = T extends T ? T[keyof T] : never;
 type Labels = ImportType<typeof labelsMap>;
 type Parshah = keyof typeof maftirOffset;
 type TorahBookName = keyof typeof labelsMap;
 type BookName = keyof typeof transBookMap;
 
+const getReading = (leyning: Leyning, num: AliyahNum) => {
+  const aliyah = num === "H" ? leyning.haft : leyning.fullkriyah[num];
+  return Array.isArray(aliyah) ? aliyah : [aliyah];
+};
+
 function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
-  const aliyah = useMemo(() => {
-    const reading = getLeyningForParsha(params.parshah);
-    const aliyah = params.aliyah === "H" ? reading.haft : reading.fullkriyah[params.aliyah];
-    return Array.isArray(aliyah) ? aliyah : [aliyah];
-  }, [params.parshah, params.aliyah]);
+  const leyning = useMemo(() => getLeyning(params.readingId), [params.readingId]);
+  const aliyah = getReading(leyning, params.aliyah);
+
+  const key = params.aliyah + leyning.name.en;
+
+  useEffect(() => {
+    navigation.setOptions({ title: leyning.name.en });
+  }, [navigation, key]);
 
   // in the files in data/, the maftir is in the 7th aliyah, so we need to
   // adjust for that with startingWordOffset
   const dataAliyahNum = params.aliyah === "M" ? "7" : params.aliyah;
-  const startingWordOffset = params.aliyah === "M" ? maftirOffset[params.parshah] : 0;
 
-  const audio = useAudio(audioMap[params.parshah][dataAliyahNum]);
+  const parshah = leyning.parsha?.length == 1 ? (leyning.parsha[0] as Parshah) : null;
 
-  const parshahBook = BOOK[parshiyot[params.parshah].book] as TorahBookName;
-  const allLabels = usePromise<Labels>(labelsMap[parshahBook], [parshahBook]);
-  const labels: number[] = allLabels && (allLabels as any)[params.parshah][dataAliyahNum];
+  const hebcalNum = params.aliyah == "H" ? "haftara" : params.aliyah;
+  const haveAudio = parshah != null && (leyning.reason == null || !(hebcalNum in leyning.reason));
+  const audio = useAudio(haveAudio ? audioMap[parshah][dataAliyahNum] : null);
+
+  const startingWordOffset = haveAudio && params.aliyah === "M" ? maftirOffset[parshah] : 0;
+
+  const labelsPromise: Promise<number[]> = useMemo(async () => {
+    if (!haveAudio) return await Promise.race([]);
+    const parshahBook = BOOK[parshiyot[parshah].book] as TorahBookName;
+    const { default: labels } = await labelsMap[parshahBook]();
+    return (labels as any)[parshah]![dataAliyahNum];
+  }, [key]);
+  const labels = usePromise(() => labelsPromise, [key]);
 
   const book = usePromise<Book[]>(
     () => Promise.all(aliyah.map(({ k }) => bookMap[k as BookName]())),
-    [aliyah],
+    [key],
   );
   const transBook = usePromise<TransBook[]>(
-    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]())),
-    [aliyah],
+    // ok micah
+    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]?.())),
+    [key],
   );
 
   const [textSizeMultiplier, setTextSizeMultiplier] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
   const [translationOn, setTranslationOn] = useState(false);
   const [tikkunOn, setTikkunOn] = useState(false);
+
+  const wordStyle = useMemo(
+    () => getWordStyle(tikkunOn, textSizeMultiplier),
+    [tikkunOn, textSizeMultiplier],
+  );
 
   useEffect(() => {
     navigation.setOptions({
@@ -238,15 +268,18 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
     });
   }, [navigation]);
 
-  const changeAudioTime = useCallback(
-    (wordIndex: number) => {
-      var newTime = labels[wordIndex - startingWordOffset];
-      audio!.setCurrentTime(newTime);
-    },
-    [labels, startingWordOffset, audio?.setCurrentTime],
+  const changeAudioTime = useMemo(
+    () =>
+      audio
+        ? async (wordIndex: number) => {
+            var newTime = (await labelsPromise)[wordIndex - startingWordOffset];
+            audio.setCurrentTime(newTime);
+          }
+        : undefined,
+    [labelsPromise, startingWordOffset, audio?.setCurrentTime],
   );
 
-  if (!audio || !labels || !book || !transBook) {
+  if (!book || (!translationOn && !transBook)) {
     return (
       <View>
         <ActivityIndicator size="large" />
@@ -255,12 +288,13 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
     );
   } else {
     const unBitwiseNot = (x: number) => (x < 0 ? ~x : x);
-    const audioInactive = !audio.playing && audio.currentTime == 0;
-    const activeWordIndex = audioInactive
-      ? null
-      : unBitwiseNot(binarySearch(labels, audio.currentTime, (a, b) => (a === b ? -1 : a - b))) -
-        1 -
-        startingWordOffset;
+    const audioInactive = audio == null || (!audio.playing && audio.currentTime == 0);
+    const activeWordIndex =
+      audioInactive || !labels
+        ? null
+        : unBitwiseNot(binarySearch(labels, audio.currentTime, (a, b) => (a === b ? -1 : a - b))) -
+          1 -
+          startingWordOffset;
 
     return (
       <View style={{ flex: 1, maxHeight: "100%" }}>
@@ -273,43 +307,43 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
           <PlaySettings
             textSizeMultiplier={textSizeMultiplier}
             setTextSizeMultiplier={setTextSizeMultiplier}
-            audioSpeed={audio.speed}
-            setAudioSpeed={audio.setSpeed}
+            audioSpeed={audio?.speed}
+            setAudioSpeed={audio?.setSpeed}
             closeSettings={() => setModalVisible(false)}
           />
         </Modal>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
             changeAudioTime={changeAudioTime}
-            translationFlag={translationOn}
-            tikkunFlag={tikkunOn}
-            textSizeMultiplier={textSizeMultiplier}
+            wordStyle={wordStyle}
             activeWordIndex={activeWordIndex}
             book={book}
-            transBook={transBook}
+            transBook={translationOn ? transBook : null}
             aliyah={aliyah}
           />
         </ScrollView>
         <View style={styles.footer}>
+          {audio && changeAudioTime ? (
+            <FooterButton
+              onPress={() => {
+                if (audioInactive) {
+                  changeAudioTime(0);
+                } else {
+                  audio.toggle();
+                }
+              }}
+              buttonTitle={audio.loaded ? (audio.playing ? "Pause" : "Play") : "Audio loading..."}
+              disabled={!audio.loaded}
+            />
+          ) : (
+            <FooterButton buttonTitle="No audio for aliyah" disabled={true} />
+          )}
           <FooterButton
-            style={styles.footerButton}
-            doOnPress={() => {
-              if (audioInactive) {
-                changeAudioTime(0);
-              } else {
-                audio.toggle();
-              }
-            }}
-            buttonTitle={audio.playing ? "Pause" : "Play"}
-          />
-          <FooterButton
-            style={styles.footerButton}
-            doOnPress={() => setTranslationOn((b) => !b)}
+            onPress={() => setTranslationOn((b) => !b)}
             buttonTitle={translationOn ? "Translation Off" : "Translation On"}
           />
           <FooterButton
-            style={styles.footerButton}
-            doOnPress={() => setTikkunOn((b) => !b)}
+            onPress={() => setTikkunOn((b) => !b)}
             buttonTitle={tikkunOn ? "Tikkun Off" : "Tikkun On"}
           />
         </View>
@@ -321,8 +355,8 @@ function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
 type PlaySettingsProps = {
   textSizeMultiplier: number;
   setTextSizeMultiplier: (v: number) => void;
-  audioSpeed: number;
-  setAudioSpeed: (v: number) => void;
+  audioSpeed?: number;
+  setAudioSpeed?: (v: number) => void;
   closeSettings: () => void;
 };
 function PlaySettings({
@@ -333,8 +367,9 @@ function PlaySettings({
   closeSettings,
 }: PlaySettingsProps) {
   const [settingsTextSize, setSettingsTextSize] = useState(textSizeMultiplier);
-  const [savedAudioSpeed, setSavedAudioSpeed] = useState(audioSpeed);
+  const [savedAudioSpeed, setSavedAudioSpeed] = useState(audioSpeed ?? 1);
 
+  const breishit = "בְּרֵאשִׁ֖ית";
   return (
     <View style={{ marginTop: 22 }}>
       <View>
@@ -347,31 +382,33 @@ function PlaySettings({
             value={settingsTextSize}
             onValueChange={setSettingsTextSize}
           />
-          <Text style={getTextStyle(false, settingsTextSize)}>בְּרֵאשִׁ֖ית</Text>
-          <Text style={getTextStyle(true, settingsTextSize)}>בראשית</Text>
+          <Word word={breishit} wordStyle={getWordStyle(false, settingsTextSize)} />
+          <Word word={breishit} wordStyle={getWordStyle(true, settingsTextSize)} />
         </View>
-        <View style={styles.modalSection}>
-          <Text>Set Audio Speed:</Text>
-          <Slider
-            minimumValue={0.5}
-            maximumValue={2}
-            value={audioSpeed}
-            onValueChange={setAudioSpeed}
-          />
-        </View>
+        {audioSpeed != null && setAudioSpeed != null && (
+          <View style={styles.modalSection}>
+            <Text>Set Audio Speed:</Text>
+            <Slider
+              minimumValue={0.5}
+              maximumValue={2}
+              value={audioSpeed}
+              onValueChange={setAudioSpeed}
+            />
+          </View>
+        )}
 
         <View style={styles.modalFooter}>
           <CustomButton
-            doOnPress={() => {
-              setSavedAudioSpeed(audioSpeed);
+            onPress={() => {
+              if (audioSpeed != null) setSavedAudioSpeed(audioSpeed);
               setTextSizeMultiplier(settingsTextSize);
               closeSettings();
             }}
             buttonTitle="Save Settings"
           />
           <CustomButton
-            doOnPress={() => {
-              setAudioSpeed(savedAudioSpeed);
+            onPress={() => {
+              if (setAudioSpeed) setAudioSpeed(savedAudioSpeed);
               setSettingsTextSize(textSizeMultiplier);
               closeSettings();
             }}
@@ -381,94 +418,6 @@ function PlaySettings({
       </View>
     </View>
   );
-}
-
-type Audio = {
-  currentTime: number;
-  setCurrentTime: (time: number) => void;
-  playing: boolean;
-  play: () => void;
-  pause: () => void;
-  toggle: () => void;
-  speed: number;
-  setSpeed: (speed: number) => void;
-};
-type AudioMethods = { [k in keyof Audio as Audio[k] extends Function ? k : never]: Audio[k] };
-
-function useAudio(title: import("expo-av").AVPlaybackSource): Audio | null {
-  const audio = useRef<Audio.Sound>();
-  const [methods, setMethods] = useState<AudioMethods>();
-  const [status, setStatus] = useState<AVPlaybackStatusSuccess>();
-  useEffect(() => {
-    let ignore = false;
-    let isPlaying = false;
-    Audio.Sound.createAsync(title, { progressUpdateIntervalMillis: 50 }, (status) => {
-      if (!status.isLoaded) {
-        if (status.error) console.error(status.error);
-        return;
-      }
-      isPlaying = status.isPlaying;
-      setStatus(status);
-    }).then(({ sound }) => {
-      if (ignore) return;
-      audio.current = sound;
-      const getAudio = () => {
-        if (!audio.current) throw new Error("audio is unloaded");
-        return audio.current;
-      };
-      setMethods(makeAudioMethods(getAudio, () => isPlaying));
-    });
-    return () => {
-      ignore = true;
-      if (audio.current) audio.current.unloadAsync();
-      audio.current = undefined;
-    };
-  }, [title]);
-  if (!methods || !status) return null;
-  return {
-    currentTime: status.positionMillis / 1000,
-    playing: status.isPlaying,
-    speed: status.rate,
-    ...methods,
-  };
-}
-
-const makeAudioMethods = (getAudio: () => Audio.Sound, isPlaying: () => boolean): AudioMethods => ({
-  setCurrentTime: (time: number) => {
-    getAudio().setStatusAsync({ positionMillis: time * 1000, shouldPlay: true });
-  },
-  play: () => {
-    getAudio().setStatusAsync({ shouldPlay: true });
-  },
-  pause: () => {
-    getAudio().setStatusAsync({ shouldPlay: false });
-  },
-  toggle: () => {
-    getAudio().setStatusAsync({ shouldPlay: !isPlaying() });
-  },
-  setSpeed: (speed: number) => {
-    getAudio().setStatusAsync({
-      rate: speed,
-      shouldCorrectPitch: true,
-      pitchCorrectionQuality: Audio.PitchCorrectionQuality.Low,
-    });
-  },
-});
-
-function usePromise<T>(getProm: () => Promise<T>, dependencies: React.DependencyList): T | null {
-  const [result, setResult] = useState<T | null>(null);
-  useEffect(() => {
-    let ignore = false;
-    getProm()
-      .then((result) => {
-        if (!ignore) setResult(result);
-      })
-      .catch((err) => console.error(err));
-    return () => {
-      ignore = true;
-    };
-  }, dependencies);
-  return result;
 }
 
 function parseChV(s: string): [number, number] {
@@ -481,19 +430,16 @@ type TransBook = ImportType<typeof transBookMap>;
 type VersesProps = {
   aliyah: Aliyah[];
   book: Book[];
-  transBook: TransBook[];
-  translationFlag: boolean;
+  transBook: TransBook[] | null;
   activeWordIndex: number | null;
-  tikkunFlag: boolean;
-  changeAudioTime: (wordIndex: number) => void;
-  textSizeMultiplier: number;
+  changeAudioTime: ((wordIndex: number) => void) | undefined;
+  wordStyle: WordStyle;
 };
 const Verses = React.memo(function Verses(props: VersesProps) {
-  const { aliyah, book, transBook, translationFlag, activeWordIndex } = props;
+  const { aliyah, book, transBook, activeWordIndex } = props;
   const verseText: React.JSX.Element[] = [];
   aliyah.forEach((aliyah, i) => {
     const b = book[i].Tanach.tanach.book;
-    const t = transBook[i];
     let lastWordIndex = 0;
     let [curChapter, curVerse] = parseChV(aliyah.b);
     const [endChapter, endVerse] = parseChV(aliyah.e);
@@ -512,20 +458,21 @@ const Verses = React.memo(function Verses(props: VersesProps) {
           curWordIndex={lastWordIndex}
           // let React.memo work its magic when this Verse doesn't have the active word anyway
           activeWordIndex={
-            activeWordIndex &&
-            (lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
+            activeWordIndex == null
+              ? null
+              : lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
               ? activeWordIndex
-              : null)
+              : null
           }
           chapterIndex={curChapter}
           verseIndex={curVerse}
           key={`${curChapter}:${curVerse}`}
         />,
       );
-      if (translationFlag) {
+      if (transBook) {
         verseText.push(
           <Text key={`translation${curChapter}:${curVerse}`} style={{ paddingHorizontal: 5 }}>
-            {t.text[curChapter][curVerse]}
+            {transBook[i]?.text[curChapter][curVerse]}
           </Text>,
         );
       }
@@ -535,18 +482,22 @@ const Verses = React.memo(function Verses(props: VersesProps) {
     }
   });
 
-  return translationFlag ? <View>{verseText}</View> : <Text>{verseText}</Text>;
+  return transBook ? <View>{verseText}</View> : <Text>{verseText}</Text>;
 });
 
-const getTextStyle = (tikkun: boolean, textSizeMultiplier: number) => [
-  tikkun ? styles.stam : styles.word,
-  { fontSize: (tikkun ? 30 : 36) * textSizeMultiplier },
-];
+const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) =>
+  ({
+    deleteRegex: tikkun ? /[\/\u0591-\u05C7]/g : /\//g,
+    style: [
+      tikkun ? styles.stam : styles.word,
+      { fontSize: (tikkun ? 30 : 36) * textSizeMultiplier },
+    ],
+  }) as const;
+type WordStyle = ReturnType<typeof getWordStyle>;
 
 type VerseProps = {
-  tikkunFlag: boolean;
-  changeAudioTime: (wordIndex: number) => void;
-  textSizeMultiplier: number;
+  changeAudioTime: ((wordIndex: number) => void) | undefined;
+  wordStyle: WordStyle;
   curWordIndex: number;
   chapterIndex: number;
   verseIndex: number;
@@ -555,40 +506,26 @@ type VerseProps = {
 };
 const Verse = React.memo(function Verse(props: VerseProps) {
   const {
-    tikkunFlag,
     changeAudioTime,
-    textSizeMultiplier,
+    wordStyle,
     curWordIndex,
     chapterIndex,
     verseIndex,
     verse,
     activeWordIndex,
   } = props;
-  const textStyle = getTextStyle(tikkunFlag, textSizeMultiplier);
-  const deleteRegex = tikkunFlag ? /[\/\u0591-\u05C7]/g : /\//g;
   var words = verse.w.map((word, i) => {
     const wordIndex = curWordIndex + i;
-    const active = wordIndex === activeWordIndex;
-    const wordElem = (
-      <Text style={[textStyle, active && styles.active]}>
-        {(word as string).replace(deleteRegex, "")}
-      </Text>
-    );
     return (
-      <TouchableOpacity key={wordIndex} onPress={() => changeAudioTime(wordIndex)}>
-        {i == 0 ? (
-          <Text style={textStyle[0]}>
-            <View style={styles.verseNumWrapper}>
-              <Text style={styles.verseNum}>
-                {chapterIndex + 1}:{verseIndex + 1}
-              </Text>
-            </View>
-            {wordElem}
-          </Text>
-        ) : (
-          wordElem
-        )}
-      </TouchableOpacity>
+      <Word
+        key={wordIndex}
+        wordIndex={wordIndex}
+        active={wordIndex === activeWordIndex}
+        verseNum={i === 0 ? `${chapterIndex + 1}:${verseIndex + 1}` : undefined}
+        word={word as string}
+        wordStyle={wordStyle}
+        changeAudioTime={changeAudioTime}
+      />
     );
   });
 
@@ -599,6 +536,43 @@ const Verse = React.memo(function Verse(props: VerseProps) {
     </Text>
   );
 });
+
+type Maybe<T> = T | { [k in keyof T]?: never };
+type MaybeAnd<T, U> = (Maybe<T> & { [k in keyof U]?: never }) | (T & Maybe<U>);
+type WordIndexInfo = MaybeAnd<
+  { wordIndex: number },
+  { changeAudioTime: (wordIndex: number) => void }
+>;
+type WordProps = WordIndexInfo & {
+  wordStyle: WordStyle;
+  word: string;
+  verseNum?: string;
+  active?: boolean;
+};
+function Word({ word, wordStyle, verseNum, active, wordIndex, changeAudioTime }: WordProps) {
+  const wordElem = (
+    <Text style={[wordStyle.style, active && styles.active]}>
+      {word.replace(wordStyle.deleteRegex, "")}
+    </Text>
+  );
+  return (
+    <TouchableOpacity
+      onPress={changeAudioTime && (() => changeAudioTime(wordIndex))}
+      disabled={!changeAudioTime}
+    >
+      {verseNum ? (
+        <Text style={wordStyle.style[0]}>
+          <View style={styles.verseNumWrapper}>
+            <Text style={styles.verseNum}>{verseNum}</Text>
+          </View>
+          {wordElem}
+        </Text>
+      ) : (
+        wordElem
+      )}
+    </TouchableOpacity>
+  );
+}
 
 // const PocketTorah = StackNavigator({
 //   Home: { screen: HomeScreen },
@@ -613,15 +587,16 @@ type Params = {
   About: undefined;
   TorahReadingsScreen: undefined;
   AliyahSelectScreen: {
-    parshah: string;
+    readingId: ReadingId;
   };
-  ParshahHashavuaScreen: undefined;
   PlayViewScreen: {
-    parshah: Parshah;
+    readingId: ReadingId;
     aliyah: AliyahNum;
   };
 };
-type AliyahNum = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "M" | "H";
+type ReadingId = Parshah | `${number}-${number}-${number}`;
+const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
+type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
 type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
 
 const Stack = createStackNavigator<Params>();
@@ -653,14 +628,10 @@ const App = () => (
         options={{ title: "Torah Readings" }}
       />
       <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
-      <Stack.Screen name="ParshahHashavuaScreen" component={ParshahHashavuaScreen} />
       <Stack.Screen
         name="PlayViewScreen"
         component={PlayViewScreen}
-        options={({ route }) => ({
-          title: `${route.params.parshah}`,
-          cardStyle: { maxHeight: "100%" },
-        })}
+        options={({ route }) => ({ cardStyle: { maxHeight: "100%" } })}
       />
     </Stack.Navigator>
   </NavigationContainer>
