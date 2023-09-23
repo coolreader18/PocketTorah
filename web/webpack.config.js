@@ -32,12 +32,14 @@ const babelLoaderConfiguration = {
   },
 };
 
+const publicPath = process.env.WEBPACK_PUBLIC_PATH || "/";
+
 // This is needed for webpack to import static images in JavaScript files.
 const imageLoaderConfiguration = {
   test: /\.(gif|jpe?g|png|svg|mp3|ttf)$/,
   use: {
     loader: "@callstack/repack/assets-loader",
-    options: { platform: "web", scalableAssetExtensions: SCALABLE_ASSETS },
+    options: { platform: "web", scalableAssetExtensions: SCALABLE_ASSETS, publicPath },
   },
 };
 
@@ -46,7 +48,7 @@ module.exports = (env) => ({
   // configures where the build ends up
   output: {
     path: path.resolve(appDirectory, "dist"),
-    // publicPath: "/",
+    publicPath,
     clean: true,
   },
   target: "web",

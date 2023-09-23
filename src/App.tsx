@@ -298,10 +298,15 @@ const linking: import("@react-navigation/native").LinkingOptions<Params> = {
     return addPrefix(getPathFromState(state, options));
   },
 };
-const urlPrefix = "/?";
-const rmPrefix = (s: string) => (s.startsWith(urlPrefix) ? "/" + s.slice(urlPrefix.length) : s);
+const baseUrl = "/PocketTorah/";
+const urlPrefix = "?";
+const rmPrefix = (s: string) => {
+  if (s.startsWith(baseUrl)) s = s.slice(baseUrl.length);
+  s ||= "/";
+  return s.startsWith(urlPrefix) ? "/" + s.slice(urlPrefix.length) : s;
+};
 const addPrefix = (s: string) =>
-  s.startsWith(urlPrefix) || s === "/" ? s : urlPrefix + s.slice(1);
+  s === "/" ? baseUrl : s.startsWith(baseUrl + urlPrefix) ? s : baseUrl + urlPrefix + s.slice(1);
 
 const App = () => {
   useFonts(fonts);
