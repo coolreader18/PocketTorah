@@ -1,7 +1,8 @@
 const HtmlBundlerPlugin = require("html-bundler-webpack-plugin");
 const path = require("path");
 const webpack = require("webpack");
-const { SCALABLE_ASSETS } = require("@callstack/repack/dist/webpack/utils/assetExtensions.js");
+const repack = require("@callstack/repack");
+const { GenerateSW } = require("workbox-webpack-plugin");
 
 const appDirectory = path.resolve(__dirname, "../");
 
@@ -32,16 +33,33 @@ const babelLoaderConfiguration = {
   },
 };
 
-const publicPath = process.env.WEBPACK_PUBLIC_PATH || "/";
+const publicPath = process.env.WEBPACK_PUBLIC_PATH || "/PocketTorah/";
+
+/**
+ * @param {webpack.RuleSetConditionAbsolute>} test
+ * @param {webpack.RuleSetCondition} issuer
+ * @param {webpack.RuleSetRule} then
+ * @param {webpack.RuleSetRule} else_
+ * @returns {webpack.RuleSetRule[]}
+ */
+const ifIssuerElse = (test, issuer, then, else_) => [
+  { ...then, test, issuer },
+  { ...else_, test, issuer: { not: issuer } },
+];
 
 // This is needed for webpack to import static images in JavaScript files.
-const imageLoaderConfiguration = {
-  test: /\.(gif|jpe?g|png|svg|mp3|ttf)$/,
-  use: {
-    loader: "@callstack/repack/assets-loader",
-    options: { platform: "web", scalableAssetExtensions: SCALABLE_ASSETS, publicPath },
+/** @type {webpack.RuleSetRule} */
+const imageLoaderConfiguration = ifIssuerElse(
+  /\.(gif|jpe?g|png|svg|mp3|ttf)$/,
+  /\.[jt]sx?$/,
+  {
+    use: {
+      loader: "@callstack/repack/assets-loader",
+      options: { platform: "web", scalableAssetExtensions: repack.SCALABLE_ASSETS, publicPath },
+    },
   },
-};
+  { type: "asset/resource" },
+);
 
 /** @returns {webpack.Configuration} */
 module.exports = (env) => ({
@@ -49,7 +67,9 @@ module.exports = (env) => ({
   output: {
     path: path.resolve(appDirectory, "dist"),
     publicPath,
-    clean: true,
+    clean: {
+      keep: /(\.nojekyll|\.git)$/,
+    },
   },
   target: "web",
 
@@ -57,15 +77,16 @@ module.exports = (env) => ({
 
   module: {
     rules: [
+      {
+        test: /\.webmanifest$/i,
+        use: "webpack-webmanifest-loader",
+        type: "asset/resource",
+      },
       babelLoaderConfiguration,
-      imageLoaderConfiguration,
+      ...imageLoaderConfiguration,
       {
         test: /\.txt$/,
         type: "asset/source",
-      },
-      {
-        test: /\.css$/,
-        use: "css-loader",
       },
     ],
   },
@@ -86,6 +107,16 @@ module.exports = (env) => ({
     new webpack.DefinePlugin({ __DEV__: !env.production }),
     new HtmlBundlerPlugin({
       entry: { index: path.resolve(appDirectory, "web/index.html") },
+      loaderOptions: {
+        sources: [
+          {
+            tag: "link",
+            attributes: ["href"],
+            filter: ({ attributes }) => attributes.rel === "manifest",
+          },
+        ],
+      },
     }),
+    new GenerateSW(),
   ],
 });

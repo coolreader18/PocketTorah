@@ -1,6 +1,7 @@
 {
   "extends": "@tsconfig/react-native/tsconfig.json",
   "compilerOptions": {
-    "strictBindCallApply": true
+    "strictBindCallApply": true,
+    "types": ["webpack-env"]
   }
 }
