@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Button,
   Modal,
+  Switch,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import maftirOffset from "../data/maftirOffset.json";
@@ -31,6 +32,7 @@ import {
   CustomButton,
 } from "./App";
 import { useFonts } from "expo-font";
+import { UpdateSettings, useSettings } from "./settings";
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];
@@ -48,7 +50,8 @@ const getReading = (leyning: Leyning, num: AliyahNum) => {
 
 export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
-  const leyning = useMemo(() => getLeyning(params.readingId), [params.readingId]);
+  const [{ textSize: textSizeMultiplier, audioSpeed, il }, updateSettings] = useSettings();
+  const leyning = useMemo(() => getLeyning(params.readingId, il), [params.readingId, il]);
   const aliyah = getReading(leyning, params.aliyah);
 
   const key = params.aliyah + leyning.name.en;
@@ -65,7 +68,9 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const hebcalNum = params.aliyah == "H" ? "haftara" : params.aliyah;
   const haveAudio = parshah != null && (leyning.reason == null || !(hebcalNum in leyning.reason));
-  const audio = useAudio(haveAudio ? audioMap[parshah][dataAliyahNum] : null);
+  const audio = useAudio(haveAudio ? audioMap[parshah][dataAliyahNum] : null, {
+    speed: audioSpeed,
+  });
 
   const startingWordOffset = haveAudio && params.aliyah === "M" ? maftirOffset[parshah] : 0;
 
@@ -88,7 +93,6 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const [fontsLoaded] = useFonts(fonts);
 
-  const [textSizeMultiplier, setTextSizeMultiplier] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
   const [translationOn, setTranslationOn] = useState(false);
   const [tikkunOn, setTikkunOn] = useState(false);
@@ -145,11 +149,8 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
           onRequestClose={() => console.log("Modal has been closed.")}
         >
           <PlaySettings
-            textSizeMultiplier={textSizeMultiplier}
-            setTextSizeMultiplier={setTextSizeMultiplier}
-            audioSpeed={audio?.speed}
-            setAudioSpeed={audio?.setSpeed}
             closeSettings={() => setModalVisible(false)}
+            setAudioSpeed={audio?.setSpeed}
           />
         </Modal>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 5 }}>
@@ -193,22 +194,19 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 }
 
 type PlaySettingsProps = {
-  textSizeMultiplier: number;
-  setTextSizeMultiplier: (v: number) => void;
-  audioSpeed?: number;
-  setAudioSpeed?: (v: number) => void;
   closeSettings: () => void;
+  setAudioSpeed?: (speed: number) => void;
 };
 
-function PlaySettings({
-  textSizeMultiplier,
-  setTextSizeMultiplier,
-  audioSpeed,
-  setAudioSpeed,
-  closeSettings,
-}: PlaySettingsProps) {
-  const [settingsTextSize, setSettingsTextSize] = useState(textSizeMultiplier);
-  const [savedAudioSpeed, setSavedAudioSpeed] = useState(audioSpeed ?? 1);
+export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps) {
+  const [settings, updateSettings] = useSettings();
+  const [tempSettings, setTempSettings] = useState(settings);
+  const updateTempSettings: UpdateSettings = (upd) =>
+    setTempSettings((prev) => ({ ...prev, ...upd }));
+
+  useEffect(() => {
+    setAudioSpeed?.(tempSettings.audioSpeed);
+  }, [setAudioSpeed, tempSettings.audioSpeed]);
 
   const breishit = "בְּרֵאשִׁ֖ית";
   return (
@@ -220,38 +218,43 @@ function PlaySettings({
           <Slider
             minimumValue={0.5}
             maximumValue={2}
-            value={settingsTextSize}
-            onValueChange={setSettingsTextSize}
+            value={tempSettings.textSize}
+            onValueChange={(textSize) => updateTempSettings({ textSize })}
           />
-          <Word word={breishit} wordStyle={getWordStyle(false, settingsTextSize)} />
-          <Word word={breishit} wordStyle={getWordStyle(true, settingsTextSize)} />
+          <Word word={breishit} wordStyle={getWordStyle(false, tempSettings.textSize)} />
+          <Word word={breishit} wordStyle={getWordStyle(true, tempSettings.textSize)} />
         </View>
-        {audioSpeed != null && setAudioSpeed != null && (
+        {setAudioSpeed && (
           <View style={styles.modalSection}>
             <Text>Set Audio Speed:</Text>
             <Slider
               minimumValue={0.5}
               maximumValue={2}
-              value={audioSpeed}
-              onValueChange={setAudioSpeed}
+              value={tempSettings.audioSpeed}
+              onSlidingComplete={(audioSpeed) => updateTempSettings({ audioSpeed })}
             />
           </View>
         )}
 
+        <View
+          style={[styles.modalSection, { flexDirection: "row", justifyContent: "space-between" }]}
+        >
+          <Text>Israeli Holiday Scheme?</Text>
+          <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
+        </View>
+
         <View style={styles.modalFooter}>
           <CustomButton
             onPress={() => {
-              if (audioSpeed != null) setSavedAudioSpeed(audioSpeed);
-              setTextSizeMultiplier(settingsTextSize);
+              updateSettings(tempSettings);
               closeSettings();
             }}
             buttonTitle="Save Settings"
           />
           <CustomButton
             onPress={() => {
-              if (setAudioSpeed) setAudioSpeed(savedAudioSpeed);
-              setSettingsTextSize(textSizeMultiplier);
               closeSettings();
+              setAudioSpeed?.(settings.audioSpeed);
             }}
             buttonTitle="Cancel"
           />
@@ -287,12 +290,12 @@ const Verses = React.memo(function Verses(props: VersesProps) {
     const [endChapter, endVerse] = parseChV(aliyah.e);
     for (
       let [curChapter, curVerse] = parseChV(aliyah.b);
-      curChapter <= endChapter && curVerse <= endVerse;
+      curChapter < endChapter || curVerse <= endVerse;
       curVerse++
     ) {
       const verse = b.c[curChapter]!.v[curVerse];
       if (verse == null) {
-        curChapter = curChapter + 1;
+        curChapter++;
         curVerse = 0;
         continue;
       }

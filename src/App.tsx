@@ -6,25 +6,28 @@
  * @flow strict-local
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
 
-import { NavigationContainer, getPathFromState, getStateFromPath } from "@react-navigation/native";
+import {
+  NavigationContainer,
+  getPathFromState,
+  getStateFromPath,
+  LinkingOptions,
+} from "@react-navigation/native";
 import { StackScreenProps, createStackNavigator } from "@react-navigation/stack";
 
 import maftirOffset from "../data/maftirOffset.json";
-import { HDate, HebrewCalendar, parshiot as hebcalParshiot } from "@hebcal/core";
+import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
 import { getLeyningOnDate, getLeyningForParsha, formatAliyahShort, Leyning } from "@hebcal/leyning";
 
 import { audio as audioMap, fonts } from "./assetImports";
 
 import { platformSelect } from "./utils";
-import { PlayViewScreen } from "./PlayViewScreen";
-import { Calendar } from "react-native-calendars";
-import { MarkedDates } from "react-native-calendars/src/types";
-import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
-import { toMarkingFormat } from "react-native-calendars/src/interface";
+import { PlaySettings, PlayViewScreen } from "./PlayViewScreen";
 import { useFonts } from "expo-font";
+import { SettingsProvider, useSettings } from "./settings";
+import { CalendarScreen } from "./CalendarScreen";
 
 type CustomButtonProps = {
   onPress?: () => void;
@@ -73,7 +76,8 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
         }}
         buttonTitle="This Week's Torah Readings"
       />
-      <CustomButton onPress={() => navigate("CalendarScreen")} buttonTitle="Calendar of Readings" />
+      <CustomButton onPress={() => navigate("Calendar")} buttonTitle="Calendar of Readings" />
+      <CustomButton onPress={() => navigate("Settings")} buttonTitle="Settings" />
       <CustomButton onPress={() => navigate("About")} buttonTitle="About this App" />
     </ScrollView>
   );
@@ -130,8 +134,9 @@ function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">)
 
 function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScreen">) {
   const { readingId } = route.params;
+  const [{ il }] = useSettings();
 
-  const reading = useMemo(() => getLeyning(readingId), [readingId]);
+  const reading = useMemo(() => getLeyning(readingId, il), [readingId]);
 
   useEffect(() => {
     navigation.setOptions({ title: reading.name.en });
@@ -162,13 +167,13 @@ const aliyahName = (num: AliyahNum) =>
 
 const isParshah = (x: string): x is Parshah => x in audioMap;
 
-export const getLeyning = (readingId: ReadingId): Leyning => {
+export const getLeyning = (readingId: ReadingId, il: boolean): Leyning => {
   if (isParshah(readingId)) {
     return getLeyningForParsha(readingId);
   } else {
     const d = dateFromStr(readingId);
     if (!d) throw new Error("bad date");
-    return getLeyningOnDate(d, false);
+    return getLeyningOnDate(d, il);
   }
 };
 
@@ -177,7 +182,7 @@ declare module "@hebcal/leyning" {
   export function getLeyningOnDate(hdate: HDate, il: boolean, wantarray: true): Leyning[];
 }
 
-const dateToStr = (date: HDate) =>
+export const dateToStr = (date: HDate) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` as const;
 
 const dateFromStr = (str: string): HDate | null => {
@@ -188,59 +193,15 @@ const dateFromStr = (str: string): HDate | null => {
 
 export type Parshah = keyof typeof maftirOffset;
 
-function CalendarScreen({ navigation }: ScreenProps<"CalendarScreen">) {
-  const [year, setYear] = useState(() => new Date().getFullYear());
-  return (
-    <Calendar
-      disableAllTouchEventsForDisabledDays={true}
-      disabledByDefault={true}
-      markedDates={getMarkedDates(year)}
-      onMonthChange={({ month, year }) => {
-        setYear(year);
-        if (month <= 2) Promise.resolve().then(() => fillMarkedDatesCache(year - 1));
-        else if (month >= 11) Promise.resolve().then(() => fillMarkedDatesCache(year + 1));
-      }}
-      onDayPress={({ year, month, day }) => {
-        navigation.navigate("AliyahSelectScreen", {
-          readingId: dateToStr(new HDate(new Date(year, month - 1, day))),
-        });
-      }}
-    />
-  );
-}
-
-const markedDatesCache: MarkedDates = {};
-const markedYears: { [y: number]: true } = Object.create(null);
-const fillMarkedDatesCache = (year: number) => {
-  if (markedYears[year]) return;
-  const endDate = new HDate(new Date(year, 11, 31));
-  for (
-    let date = new HDate(new Date(year, 0, 1));
-    date.abs() <= endDate.abs();
-    date = date.next()
-  ) {
-    const l = getLeyningOnDate(date, false);
-    if (l) {
-      markedDatesCache[toMarkingFormat(date.greg())] = leyningToProps(l);
-    }
-  }
-};
-const leyningToProps = (leyning: Leyning): MarkingProps => ({
-  marked: true,
-  disabled: false,
-  dotColor:
-    leyning.parsha == null
-      ? "red"
-      : leyning.weekday
-      ? "green"
-      : leyning.reason
-      ? "blue"
-      : "darkblue",
-});
-const getMarkedDates = (year: number) => {
-  fillMarkedDatesCache(year);
-  return { ...markedDatesCache };
-};
+const SettingsScreen = ({ navigation }: ScreenProps<"Settings">) => (
+  <PlaySettings
+    closeSettings={() => {
+      if (navigation.canGoBack()) navigation.goBack();
+      else navigation.replace("Home");
+    }}
+    setAudioSpeed={() => {}}
+  />
+);
 
 // const calculateDates =
 
@@ -255,8 +216,9 @@ const getMarkedDates = (year: number) => {
 type Params = {
   Home: undefined;
   About: undefined;
+  Settings: undefined;
   TorahReadingsScreen: undefined;
-  CalendarScreen: undefined;
+  Calendar: undefined;
   AliyahSelectScreen: {
     readingId: ReadingId;
   };
@@ -272,17 +234,18 @@ export type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Param
 
 const Stack = createStackNavigator<Params>();
 
-const linkingConfig: import("@react-navigation/native").LinkingOptions<Params>["config"] = {
+const linkingConfig: LinkingOptions<Params>["config"] = {
   screens: {
     Home: "/",
     About: "/about",
+    Settings: "/settings",
     TorahReadingsScreen: "/books",
-    CalendarScreen: "/calendar",
+    Calendar: "/calendar",
     AliyahSelectScreen: "/reading/:readingId",
     PlayViewScreen: "/reading/:readingId/:aliyah",
   },
 };
-const linking: import("@react-navigation/native").LinkingOptions<Params> = {
+const linking: LinkingOptions<Params> = {
   prefixes: [],
   config: linkingConfig,
   getStateFromPath: (path, options) => {
@@ -318,8 +281,9 @@ const App = () => {
       }}
     >
       <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Home" }} />
-        <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="About" component={AboutScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen
           name="TorahReadingsScreen"
           component={TorahReadingsScreen}
@@ -331,7 +295,7 @@ const App = () => {
           component={PlayViewScreen}
           options={{ cardStyle: { maxHeight: "100%" } }}
         />
-        <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
+        <Stack.Screen name="Calendar" component={CalendarScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -437,4 +401,8 @@ export const styles = StyleSheet.create({
   },
 });
 
-export default App;
+export default () => (
+  <SettingsProvider>
+    <App />
+  </SettingsProvider>
+);

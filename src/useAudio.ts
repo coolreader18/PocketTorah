@@ -37,10 +37,13 @@ const defaultStatus = {
   isLoaded: false,
 };
 
+type UseAudioProps = { speed?: number };
 export function useAudio<T extends AVPlaybackSource | null>(
   title: T,
+  props?: UseAudioProps,
 ): T extends AVPlaybackSource ? Audio : null;
-export function useAudio(title: AVPlaybackSource | null): Audio | null {
+export function useAudio(title: AVPlaybackSource | null, props: UseAudioProps = {}): Audio | null {
+  const { speed = 1 } = props;
   const audio = useRef<
     | { state: "resolved"; sound: Audio.Sound }
     | { state: "pending"; prom: ExteriorPromise<AVPlaybackStatus>; status: AVPlaybackStatusToSet }
@@ -90,6 +93,13 @@ export function useAudio(title: AVPlaybackSource | null): Audio | null {
     };
   }, [title]);
   if (title == null) return null;
+  useEffect(() => {
+    if (audio.current == null && speed === 1) {
+      // don't need to do anything
+    } else {
+      setStatusAsync({ rate: speed });
+    }
+  }, [setStatusAsync, speed]);
   return {
     loaded: status.isLoaded,
     currentTime: status.positionMillis / 1000,
