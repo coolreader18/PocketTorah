@@ -125,15 +125,11 @@ function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">)
     />
   ));
 
-  return (
-    <View>
-      <ScrollView>{content}</ScrollView>
-    </View>
-  );
+  return <ScrollView>{content}</ScrollView>;
 }
 
 function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScreen">) {
-  const { readingId } = route.params;
+  const readingId = fixReadingId(route.params.readingId);
   const [{ il }] = useSettings();
 
   const reading = useMemo(() => getLeyning(readingId, il), [readingId]);
@@ -167,6 +163,8 @@ const aliyahName = (num: AliyahNum) =>
 
 const isParshah = (x: string): x is Parshah => x in audioMap;
 
+export const fixReadingId = (x: ReadingId): ReadingId =>
+  isParshah(x) ? x : (decodeURIComponent(x) as ReadingId);
 export const getLeyning = (readingId: ReadingId, il: boolean): Leyning => {
   if (isParshah(readingId)) {
     return getLeyningForParsha(readingId);
@@ -280,7 +278,7 @@ const App = () => {
         formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}`,
       }}
     >
-      <Stack.Navigator initialRouteName="Home">
+      <Stack.Navigator initialRouteName="Home" screenOptions={{ cardStyle: { maxHeight: "100%" } }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
@@ -290,11 +288,7 @@ const App = () => {
           options={{ title: "Torah Readings" }}
         />
         <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
-        <Stack.Screen
-          name="PlayViewScreen"
-          component={PlayViewScreen}
-          options={{ cardStyle: { maxHeight: "100%" } }}
-        />
+        <Stack.Screen name="PlayViewScreen" component={PlayViewScreen} />
         <Stack.Screen name="Calendar" component={CalendarScreen} />
       </Stack.Navigator>
     </NavigationContainer>

@@ -30,6 +30,7 @@ import {
   styles,
   FooterButton,
   CustomButton,
+  fixReadingId,
 } from "./App";
 import { useFonts } from "expo-font";
 import { UpdateSettings, useSettings } from "./settings";
@@ -50,8 +51,9 @@ const getReading = (leyning: Leyning, num: AliyahNum) => {
 
 export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
+  const readingId = fixReadingId(params.readingId);
   const [{ textSize: textSizeMultiplier, audioSpeed, il }, updateSettings] = useSettings();
-  const leyning = useMemo(() => getLeyning(params.readingId, il), [params.readingId, il]);
+  const leyning = useMemo(() => getLeyning(readingId, il), [readingId, il]);
   const aliyah = getReading(leyning, params.aliyah);
 
   const key = params.aliyah + leyning.name.en;
@@ -141,7 +143,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
           startingWordOffset;
 
     return (
-      <View style={{ flex: 1, maxHeight: "100%" }}>
+      <View style={{ maxHeight: "100%" }}>
         <Modal
           animationType={"slide"}
           transparent={false}
@@ -153,7 +155,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
             setAudioSpeed={audio?.setSpeed}
           />
         </Modal>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 5 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
             changeAudioTime={changeAudioTime}
             wordStyle={wordStyle}
@@ -287,18 +289,19 @@ const Verses = React.memo(function Verses(props: VersesProps) {
   aliyah.forEach((aliyah, i) => {
     const b = book[i].Tanach.tanach.book;
     let lastWordIndex = 0;
+    const [begChapter, begVerse] = parseChV(aliyah.b);
     const [endChapter, endVerse] = parseChV(aliyah.e);
-    for (
-      let [curChapter, curVerse] = parseChV(aliyah.b);
-      curChapter < endChapter || curVerse <= endVerse;
-      curVerse++
-    ) {
-      const verse = b.c[curChapter]!.v[curVerse];
-      if (verse == null) {
-        curChapter++;
-        curVerse = 0;
-        continue;
-      }
+    const selectedVerses = b.c
+      .map((c, cNum) => {
+        if (c == null) return [];
+        const verses = c!.v.map((v, vNum) => [cNum, vNum, v] as const);
+        if (cNum === begChapter) return verses.slice(begVerse);
+        else if (cNum === endChapter) return verses.slice(0, endVerse + 1);
+        else return verses;
+      })
+      .slice(begChapter, endChapter + 1)
+      .flat();
+    for (const [curChapter, curVerse, verse] of selectedVerses) {
       const nextWordIndex = lastWordIndex + verse.w.length;
       verseText.push(
         <Verse
