@@ -82,8 +82,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
     [key],
   );
   const transBook = usePromise<TransBook[]>(
-    // ok micah
-    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]?.())),
+    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]())),
     [key],
   );
 

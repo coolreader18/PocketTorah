@@ -35,6 +35,7 @@ export const transBookMap = {
   Judges: () => import("../data/torah/translation/Judges.json"),
   Malachi: () => import("../data/torah/translation/Malachi.json"),
   Obadiah: () => import("../data/torah/translation/Obadiah.json"),
+  Micah: () => import("../data/torah/translation/Micah.json"),
   "I Samuel": () => import("../data/torah/translation/Samuel_1.json"),
   "II Samuel": () => import("../data/torah/translation/Samuel_2.json"),
   Zechariah: () => import("../data/torah/translation/Zechariah.json"),
