@@ -1,3 +1,5 @@
+import { NavigationProp, ParamListBase } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
@@ -36,4 +38,21 @@ export function usePromise<T>(
     };
   }, dependencies);
   return result;
+}
+
+export function useScreenOptions<ScreenOptions extends {}>(
+  navigation: NavigationProp<any, any, any, any, ScreenOptions>,
+  options: Partial<ScreenOptions> | (() => Partial<ScreenOptions>),
+  deps: React.DependencyList = [],
+) {
+  useEffect(() => {
+    navigation.setOptions(typeof options === "function" ? options() : options);
+  }, [navigation, ...deps]);
+}
+
+export function useScreenTitle(
+  navigation: NavigationProp<any, any, any, any, { title: string }>,
+  title: string,
+) {
+  useScreenOptions(navigation, { title }, [title]);
 }

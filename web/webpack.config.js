@@ -50,7 +50,7 @@ const ifIssuerElse = (test, issuer, then, else_) => [
 // This is needed for webpack to import static images in JavaScript files.
 /** @type {webpack.RuleSetRule} */
 const imageLoaderConfiguration = ifIssuerElse(
-  /\.(gif|jpe?g|png|svg|mp3|ttf)$/,
+  /\.(gif|jpe?g|png|svg|mp3|ttf|xml)$/,
   /\.[jt]sx?$/,
   {
     use: {

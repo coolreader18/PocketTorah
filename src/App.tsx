@@ -6,8 +6,16 @@
  * @flow strict-local
  */
 
-import React, { useEffect, useMemo } from "react";
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
+import React, { useMemo } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  StyleProp,
+  ViewStyle,
+} from "react-native";
 
 import {
   NavigationContainer,
@@ -15,7 +23,11 @@ import {
   getStateFromPath,
   LinkingOptions,
 } from "@react-navigation/native";
-import { StackScreenProps, createStackNavigator } from "@react-navigation/stack";
+import {
+  StackNavigationProp,
+  StackScreenProps,
+  createStackNavigator,
+} from "@react-navigation/stack";
 
 import maftirOffset from "../data/maftirOffset.json";
 import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
@@ -23,11 +35,13 @@ import { getLeyningOnDate, getLeyningForParsha, formatAliyahShort, Leyning } fro
 
 import { audio as audioMap, fonts } from "./assetImports";
 
-import { platformSelect } from "./utils";
+import { platformSelect, useScreenTitle } from "./utils";
 import { PlaySettings, PlayViewScreen } from "./PlayViewScreen";
 import { useFonts } from "expo-font";
 import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";
+import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 type CustomButtonProps = {
   onPress?: () => void;
@@ -77,6 +91,7 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
         buttonTitle="This Week's Torah Readings"
       />
       <CustomButton onPress={() => navigate("Calendar")} buttonTitle="Calendar of Readings" />
+      <CustomButton onPress={() => navigate("TropePhrases")} buttonTitle="Tropes" />
       <CustomButton onPress={() => navigate("Settings")} buttonTitle="Settings" />
       <CustomButton onPress={() => navigate("About")} buttonTitle="About this App" />
     </ScrollView>
@@ -109,6 +124,10 @@ function AboutScreen() {
         <Text style={styles.aboutPageListItem}>Joshua Schwartz</Text>
         <Text style={styles.aboutPageListItem}>Abigail Teller</Text>
       </View>
+      <Text style={styles.aboutPageHeader}>Trope Provided by:</Text>
+      <View>
+        <Text style={styles.aboutPageListItem}>Cantor Elizabeth K. Sacks</Text>
+      </View>
     </View>
   );
 }
@@ -134,9 +153,7 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
 
   const reading = useMemo(() => getLeyning(readingId, il), [readingId]);
 
-  useEffect(() => {
-    navigation.setOptions({ title: reading.name.en });
-  }, [navigation, reading.name.en]);
+  useScreenTitle(navigation, reading.name.en);
 
   const kriyah = reading.fullkriyah ?? reading.weekday!;
   const namePrefix = reading.fullkriyah ? "" : "Weekday ";
@@ -224,11 +241,15 @@ type Params = {
     readingId: ReadingId;
     aliyah: AliyahNum;
   };
+  TropePhrases: undefined;
+  TropeSelectScreen: { tropeType: TropeType };
+  TropePlayScreen: { tropeType: TropeType; tropeIndex: number };
 };
 type ReadingId = Parshah | `${number}-${number}-${number}`;
 const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
 export type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
 export type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
+export type NavigationProp = StackNavigationProp<Params>;
 
 const Stack = createStackNavigator<Params>();
 
@@ -241,6 +262,9 @@ const linkingConfig: LinkingOptions<Params>["config"] = {
     Calendar: "/calendar",
     AliyahSelectScreen: "/reading/:readingId",
     PlayViewScreen: "/reading/:readingId/:aliyah",
+    TropePhrases: "/tropes",
+    TropeSelectScreen: "/tropes/:tropeType",
+    TropePlayScreen: "/tropes/:tropeType/:tropeIndex",
   },
 };
 const linking: LinkingOptions<Params> = {
@@ -271,6 +295,14 @@ const addPrefix = (s: string) =>
 
 const App = () => {
   useFonts(fonts);
+  const insets = useSafeAreaInsets();
+  const cardStyle: StyleProp<ViewStyle> = {
+    maxHeight: "100%",
+    paddingTop: insets.top,
+    paddingRight: insets.right,
+    paddingBottom: insets.bottom,
+    paddingLeft: insets.left,
+  };
   return (
     <NavigationContainer
       linking={linking}
@@ -278,7 +310,7 @@ const App = () => {
         formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}`,
       }}
     >
-      <Stack.Navigator initialRouteName="Home" screenOptions={{ cardStyle: { maxHeight: "100%" } }}>
+      <Stack.Navigator initialRouteName="Home" screenOptions={{ cardStyle }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
@@ -290,6 +322,9 @@ const App = () => {
         <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
         <Stack.Screen name="PlayViewScreen" component={PlayViewScreen} />
         <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="TropePhrases" component={TropePhrases} />
+        <Stack.Screen name="TropeSelectScreen" component={TropeSelectScreen} />
+        <Stack.Screen name="TropePlayScreen" component={TropePlayScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -397,6 +432,8 @@ export const styles = StyleSheet.create({
 
 export default () => (
   <SettingsProvider>
-    <App />
+    <SafeAreaProvider>
+      <App />
+    </SafeAreaProvider>
   </SettingsProvider>
 );
