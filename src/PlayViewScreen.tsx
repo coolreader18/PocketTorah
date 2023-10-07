@@ -154,6 +154,7 @@ type PlayViewProps = {
   buttons?: React.ReactNode;
   startingWordOffset?: number;
   navigation: NavigationProp;
+  forceLinebreakVerses?: boolean;
 };
 export type VerseData = {
   chapterVerse?: [number, number];
@@ -168,6 +169,7 @@ export function PlayView({
   buttons,
   startingWordOffset = 0,
   navigation,
+  forceLinebreakVerses = false,
 }: PlayViewProps) {
   const [{ textSize: textSizeMultiplier, audioSpeed }] = useSettings();
 
@@ -239,6 +241,7 @@ export function PlayView({
             changeAudioTime={changeAudioTime}
             wordStyle={wordStyle}
             activeWordIndex={activeWordIndex}
+            forceLinebreakVerses={forceLinebreakVerses}
           />
         </ScrollView>
         <View style={styles.footer}>
@@ -346,12 +349,18 @@ type TransBook = ImportType<typeof transBookMap>;
 type VersesProps = {
   verses: VerseData[];
   activeWordIndex: number | null;
+  forceLinebreakVerses: boolean;
   changeAudioTime: ((wordIndex: number) => void) | undefined;
   wordStyle: WordStyle;
 };
 
-const Verses = React.memo(function Verses(props: VersesProps) {
-  const { verses, activeWordIndex } = props;
+const Verses = React.memo(function Verses({
+  verses,
+  activeWordIndex,
+  forceLinebreakVerses,
+  changeAudioTime,
+  wordStyle,
+}: VersesProps) {
   let lastWordIndex = 0;
   let anyTrans = false;
   const verseText = verses.map((verse, i) => {
@@ -360,15 +369,14 @@ const Verses = React.memo(function Verses(props: VersesProps) {
     const key = verse.chapterVerse?.join(":") ?? i;
     const ret = (
       <Verse
-        {...props}
         key={key}
         verse={verse}
         curWordIndex={lastWordIndex}
+        changeAudioTime={changeAudioTime}
+        wordStyle={wordStyle}
         // let React.memo work its magic when this Verse doesn't have the active word anyway
         activeWordIndex={
-          activeWordIndex == null
-            ? null
-            : lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
+          activeWordIndex && lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
             ? activeWordIndex
             : null
         }
@@ -378,7 +386,7 @@ const Verses = React.memo(function Verses(props: VersesProps) {
     return ret;
   });
 
-  return anyTrans ? <View>{verseText}</View> : <Text>{verseText}</Text>;
+  return forceLinebreakVerses || anyTrans ? <View>{verseText}</View> : <Text>{verseText}</Text>;
 });
 
 const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) =>
@@ -424,7 +432,7 @@ const Verse = React.memo(function Verse(props: VerseProps) {
   return (
     <>
       <Text>
-        <Text key="rtl">{"\u200F"}</Text>
+        <Text>{"\u200F"}</Text>
         {words}
       </Text>
       {verse.translation && <Text style={{ paddingHorizontal: 5 }}>{verse.translation}</Text>}

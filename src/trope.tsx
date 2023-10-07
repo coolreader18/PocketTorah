@@ -146,7 +146,7 @@ export const TropePhrases = ({ navigation }: ScreenProps<"TropePhrases">) => {
 export const TropeSelectScreen = ({ route, navigation }: ScreenProps<"TropeSelectScreen">) => {
   const { tropeType } = route.params;
   const { title, tropes } = tropeTypeInfo[tropeType];
-  useScreenTitle(navigation, title);
+  useScreenTitle(navigation, `${title} Tropes`);
   return (
     <ScrollView>
       {tropes.map((trope, i) => (
@@ -168,7 +168,7 @@ export const TropePlayScreen = ({ navigation, route }: ScreenProps<"TropePlayScr
   );
 
   const info = tropeTypeInfo[tropeType];
-  useScreenTitle(navigation, `${info.title} - ${info.tropes[tropeIndex - 1]}`);
+  useScreenTitle(navigation, `${info.title} Tropes - ${info.tropes[tropeIndex - 1]}`);
 
   const audioSource = tropeAudio[tropeType][tropeIndex];
 
@@ -183,6 +183,7 @@ export const TropePlayScreen = ({ navigation, route }: ScreenProps<"TropePlayScr
       audioSource={audioSource}
       audioLabels={audioLabels}
       navigation={navigation}
+      forceLinebreakVerses={true}
     />
   );
 };
