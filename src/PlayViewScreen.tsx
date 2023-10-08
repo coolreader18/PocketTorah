@@ -82,7 +82,8 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   const haveAudio = parshah != null && (leyning.reason == null || !(hebcalNum in leyning.reason));
   const audioSource = haveAudio ? audioMap[parshah][dataAliyahNum] : null;
 
-  const startingWordOffset = haveAudio && params.aliyah === "M" ? maftirOffset[parshah] : 0;
+  const startingWordOffset =
+    haveAudio && params.aliyah === "M" && parshah != "Vezot Haberakhah" ? maftirOffset[parshah] : 0;
 
   const labelsPromise: Promise<number[]> = useMemo(async () => {
     if (!haveAudio) return await Promise.race([]);
@@ -187,7 +188,7 @@ export function PlayView({
     () =>
       audio
         ? async (wordIndex: number) => {
-            var newTime = (await audioLabels)[wordIndex - startingWordOffset];
+            const newTime = (await audioLabels)[wordIndex - startingWordOffset];
             audio.setCurrentTime(newTime);
           }
         : undefined,
@@ -391,7 +392,7 @@ type VerseProps = {
 
 const Verse = React.memo(function Verse(props: VerseProps) {
   const { verse, changeAudioTime, wordStyle, curWordIndex, activeWordIndex } = props;
-  var words = verse.words.map((word, i) => {
+  const words = verse.words.map((word, i) => {
     const wordIndex = curWordIndex + i;
     return (
       <Word

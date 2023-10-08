@@ -6,7 +6,7 @@ import { JSXElementConstructor } from "react";
 import React from "react";
 import { TouchableOpacity } from "react-native";
 
-const wrapComponent =
+export const wrapComponent =
   <P extends { style?: RN.StyleProp<any> }>(
     Elem: JSXElementConstructor<P>,
     styleName: keyof Styles,

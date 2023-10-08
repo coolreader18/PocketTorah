@@ -6,8 +6,8 @@
  * @flow strict-local
  */
 
-import React, { createContext, useContext, useEffect, useMemo } from "react";
-import { View, ScrollView, StyleProp, ViewStyle, useColorScheme, Platform } from "react-native";
+import React, { createContext, useContext, useMemo } from "react";
+import { ScrollView, StyleProp, ViewStyle, useColorScheme } from "react-native";
 
 import {
   NavigationContainer,
@@ -21,7 +21,6 @@ import {
   createStackNavigator,
 } from "@react-navigation/stack";
 
-import maftirOffset from "../data/maftirOffset.json";
 import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
 import { getLeyningOnDate, getLeyningForParsha, formatAliyahShort, Leyning } from "@hebcal/leyning";
 
@@ -34,7 +33,10 @@ import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";
 import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { CustomButton, Text, useNavigationTheme, useStyles } from "./theming";
+import { CustomButton, useNavigationTheme } from "./theming";
+import { AboutScreen } from "./AboutScreen";
+
+const allParshiot: Parshah[] = [...(hebcalParshiot as Parshah[]), "Vezot Haberakhah"];
 
 function HomeScreen({ navigation }: ScreenProps<"Home">) {
   const { navigate } = navigation;
@@ -64,50 +66,15 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
   );
 }
 
-function AboutScreen() {
-  const styles = useStyles();
-  return (
-    <View style={styles.aboutPage}>
-      <Text style={styles.aboutPageText}>
-        PocketTorah is a labor of love maintained by Russel Neiss & Charlie Schwartz.
-      </Text>
-      <Text style={styles.aboutPageText}>
-        Initially funded by the Jewish New Media Innovation Fund, PocketTorah is designed to help
-        you learn the weekly Torah and Haftarah portions anywhere, at any time, for free.
-      </Text>
-      <Text style={styles.aboutPageText}>
-        If you like it, or find it useful, please consider making a donation to the Jewish charity
-        of your choice.
-      </Text>
-      <Text style={styles.aboutPageHeader}>Torah Readers:</Text>
-      <View>
-        <Text style={styles.aboutPageListItem}>Etta Abramson</Text>
-        <Text style={styles.aboutPageListItem}>Joshua Foster</Text>
-        <Text style={styles.aboutPageListItem}>Eitan Konigsberg</Text>
-        <Text style={styles.aboutPageListItem}>Eytan Kurshan</Text>
-        <Text style={styles.aboutPageListItem}>Ari Lucas</Text>
-        <Text style={styles.aboutPageListItem}>Rabbi Ita Paskind</Text>
-        <Text style={styles.aboutPageListItem}>Rebecca Russo</Text>
-        <Text style={styles.aboutPageListItem}>Joshua Schwartz</Text>
-        <Text style={styles.aboutPageListItem}>Abigail Teller</Text>
-      </View>
-      <Text style={styles.aboutPageHeader}>Trope Provided by:</Text>
-      <View>
-        <Text style={styles.aboutPageListItem}>Cantor Elizabeth K. Sacks</Text>
-      </View>
-    </View>
-  );
-}
-
 function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">) {
   const { navigate } = navigation;
 
   //create button for each parsha
-  var content = (hebcalParshiot as Parshah[]).map((parshah) => (
+  const content = allParshiot.map((parshah) => (
     <CustomButton
       key={parshah}
-      onPress={() => navigate("AliyahSelectScreen", { readingId: parshah })}
       buttonTitle={parshah}
+      onPress={() => navigate("AliyahSelectScreen", { readingId: parshah })}
     />
   ));
 
@@ -173,7 +140,7 @@ const dateFromStr = (str: string): HDate | null => {
   return m && new HDate(+m[3], +m[2], +m[1]);
 };
 
-export type Parshah = keyof typeof maftirOffset;
+export type Parshah = keyof typeof audioMap;
 
 const SettingsScreen = ({ navigation }: ScreenProps<"Settings">) => (
   <PlaySettings
