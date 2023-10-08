@@ -6,16 +6,8 @@
  * @flow strict-local
  */
 
-import React, { useMemo } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  StyleProp,
-  ViewStyle,
-} from "react-native";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
+import { View, ScrollView, StyleProp, ViewStyle, useColorScheme, Platform } from "react-native";
 
 import {
   NavigationContainer,
@@ -35,40 +27,14 @@ import { getLeyningOnDate, getLeyningForParsha, formatAliyahShort, Leyning } fro
 
 import { audio as audioMap, fonts } from "./assetImports";
 
-import { platformSelect, useScreenTitle } from "./utils";
+import { useScreenTitle } from "./utils";
 import { PlaySettings, PlayViewScreen } from "./PlayViewScreen";
 import { useFonts } from "expo-font";
 import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";
 import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-
-type CustomButtonProps = {
-  onPress?: () => void;
-  style?: object;
-  buttonTitle: string;
-  disabled?: boolean;
-};
-
-export function CustomButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
-  return (
-    <TouchableOpacity onPress={onPress} style={style} disabled={disabled}>
-      <Text style={styles.button}>{buttonTitle}</Text>
-    </TouchableOpacity>
-  );
-}
-
-export function FooterButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.footerButton, disabled && { opacity: 0.5 }, style]}
-      disabled={disabled}
-    >
-      <Text style={styles.footerButtonInner}>{buttonTitle}</Text>
-    </TouchableOpacity>
-  );
-}
+import { CustomButton, Text, useNavigationTheme, useStyles } from "./theming";
 
 function HomeScreen({ navigation }: ScreenProps<"Home">) {
   const { navigate } = navigation;
@@ -99,6 +65,7 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
 }
 
 function AboutScreen() {
+  const styles = useStyles();
   return (
     <View style={styles.aboutPage}>
       <Text style={styles.aboutPageText}>
@@ -218,16 +185,6 @@ const SettingsScreen = ({ navigation }: ScreenProps<"Settings">) => (
   />
 );
 
-// const calculateDates =
-
-// const PocketTorah = StackNavigator({
-//   Home: { screen: HomeScreen },
-//   About: { screen: AboutScreen },
-//   TorahReadingsScreen: { screen: TorahReadingsScreen },
-//   AliyahSelectScreen: { screen: AliyahSelectScreen },
-//   PlayViewScreen: { screen: PlayViewScreen },
-// });
-
 type Params = {
   Home: undefined;
   About: undefined;
@@ -303,9 +260,11 @@ const App = () => {
     paddingBottom: insets.bottom,
     paddingLeft: insets.left,
   };
+  const navTheme = useNavigationTheme();
   return (
     <NavigationContainer
       linking={linking}
+      theme={navTheme}
       documentTitle={{
         formatter: (options, route) => `PocketTorah - ${options?.title ?? route?.name}`,
       }}
@@ -330,110 +289,24 @@ const App = () => {
   );
 };
 
-export const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    top: 30,
-  },
-  header: {
-    fontSize: 20,
-    textAlign: "center",
-    marginTop: 20,
-    marginRight: 10,
-    marginLeft: 10,
-    marginBottom: 10,
-  },
-  instructions: {
-    textAlign: "center",
-    color: "#333333",
-    marginBottom: 5,
-  },
-  button: {
-    margin: 10,
-    padding: 10,
-    backgroundColor: "#ccc",
-    textAlign: "center",
-  },
-
-  word: {
-    flex: 0,
-    padding: 4,
-    fontFamily: "Taamey Frank Taamim Fix",
-  },
-  stam: {
-    flex: 0,
-    padding: 4,
-    fontFamily: "Stam Ashkenaz CLM",
-  },
-  active: {
-    backgroundColor: "#ffff9d",
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    alignContent: "stretch",
-  },
-  footerButton: {
-    flexGrow: 1,
-    width: 10,
-    padding: 10,
-    alignItems: "center",
-    backgroundColor: "#efeff2",
-    borderWidth: 1,
-    borderRightWidth: 0,
-    borderColor: "#d9d9de",
-  },
-  footerButtonInner: {
-    fontSize: 12,
-    textAlign: "center",
-  },
-  verseNum: {
-    marginBottom: platformSelect({ web: 0 }, 10),
-    fontSize: 10,
-    fontFamily: "inital",
-    paddingRight: platformSelect({ android: 5 }, null),
-    // @ts-ignore
-    verticalAlign: platformSelect({ web: "100%" }, null),
-  },
-  // @ts-ignore
-  verseNumWrapper: platformSelect({ web: { display: "contents" } }, {}),
-  modalHeader: {
-    fontSize: 17,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  modalSection: {
-    borderColor: "#d9d9de",
-    borderTopWidth: 1,
-    marginTop: 10,
-    padding: 10,
-  },
-  modalFooter: {
-    marginTop: 50,
-  },
-  aboutPage: {
-    margin: 10,
-  },
-  aboutPageText: {
-    marginTop: 10,
-  },
-  aboutPageHeader: {
-    fontWeight: "bold",
-    marginTop: 10,
-  },
-  aboutPageListItem: {
-    marginLeft: 10,
-    marginTop: 5,
-  },
-});
-
 export default () => (
   <SettingsProvider>
-    <SafeAreaProvider>
-      <App />
-    </SafeAreaProvider>
+    <DarkModeProvider>
+      <SafeAreaProvider>
+        <App />
+      </SafeAreaProvider>
+    </DarkModeProvider>
   </SettingsProvider>
 );
+
+const DarkModeProvider = ({ children }: React.PropsWithChildren) => {
+  const [{ colorTheme }] = useSettings();
+  const nativeColorScheme = useColorScheme();
+  const colorScheme = colorTheme === "auto" ? nativeColorScheme : colorTheme;
+  const dark = colorScheme === "dark";
+  return <DarkMode.Provider value={dark} children={children} />;
+};
+
+const DarkMode = createContext(false);
+
+export const useDarkMode = () => useContext(DarkMode);

@@ -8,15 +8,20 @@ export interface Settings {
   audioSpeed: number;
   /** Whether or not leyning should be for in eretz yisrael or not */
   il: boolean;
+  /** Color theme */
+  colorTheme: ColorTheme;
 }
+
+type ColorTheme = "auto" | "light" | "dark";
 
 const defaultSettings: Settings = {
   textSize: 1,
   audioSpeed: 1,
   il: false,
+  colorTheme: "auto",
 };
 
-const settingsFields = ["textSize", "audioSpeed", "il"] as const;
+const settingsFields = ["textSize", "audioSpeed", "il", "colorTheme"] as const;
 
 type MutuallyAssignable<T extends U, U extends V, V = T> = true;
 (_: MutuallyAssignable<(typeof settingsFields)[number], keyof Settings>) => {};
@@ -53,7 +58,7 @@ export const SettingsProvider = ({ children }: React.PropsWithChildren) => {
     settingsFields.map((k) => settings[k]),
   );
 
-  return <settingsContext.Provider value={value} children={children} />;
+  return <settingsContext.Provider {...{ value, children }} />;
 };
 
 export const useSettings = (): [Settings, UpdateSettings] => {

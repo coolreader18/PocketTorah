@@ -1,5 +1,6 @@
 import { ScrollView, View } from "react-native";
-import { CustomButton, ScreenProps } from "./App";
+import { ScreenProps } from "./App";
+import { CustomButton } from "./theming";
 import { useMemo } from "react";
 import { parseXML } from "./parseXML";
 import { PlayView } from "./PlayViewScreen";
@@ -177,13 +178,5 @@ export const TropePlayScreen = ({ navigation, route }: ScreenProps<"TropePlayScr
     [tropeType, tropeIndex],
   );
 
-  return (
-    <PlayView
-      verses={verses}
-      audioSource={audioSource}
-      audioLabels={audioLabels}
-      navigation={navigation}
-      forceLinebreakVerses={true}
-    />
-  );
+  return <PlayView {...{ verses, audioSource, audioLabels, navigation }} forceLinebreakVerses />;
 };

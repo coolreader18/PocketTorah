@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
@@ -18,21 +17,15 @@ import {
   bookMap,
   transBookMap,
   fonts,
+  tikkunFont,
+  hebFont,
 } from "./assetImports";
 import binarySearch from "binary-search";
 import { usePromise, useScreenOptions, useScreenTitle } from "./utils";
 import { useAudio } from "./useAudio";
-import {
-  AliyahNum,
-  ScreenProps,
-  getLeyning,
-  Parshah,
-  styles,
-  FooterButton,
-  CustomButton,
-  fixReadingId,
-  NavigationProp,
-} from "./App";
+import { AliyahNum, ScreenProps, getLeyning, Parshah, fixReadingId, NavigationProp } from "./App";
+import { Footer, FooterButton, ModalSection, Text, useStyles } from "./theming";
+import { CustomButton } from "./theming";
 import { useFonts } from "expo-font";
 import { UpdateSettings, useSettings } from "./settings";
 import { AVPlaybackSource } from "expo-av";
@@ -113,37 +106,33 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   return (
     <PlayView
-      verses={verses}
-      startingWordOffset={startingWordOffset}
-      audioSource={audioSource}
       audioLabels={labelsPromise}
       tikkun={tikkunOn}
-      buttons={buttons}
-      navigation={navigation}
+      {...{ verses, startingWordOffset, audioSource, buttons, navigation }}
     />
   );
 }
 const extractVerseData = (aliyah: Aliyah[], book: Book[], transBook?: TransBook[]): VerseData[] =>
   aliyah.flatMap((aliyah, i) => {
     const b = book[i].Tanach.tanach.book;
+    // these values are 0-indexed and **inclusive**
     const [begChapter, begVerse] = parseChV(aliyah.b);
     const [endChapter, endVerse] = parseChV(aliyah.e);
-    return b.c
-      .map((c, cNum) => {
-        if (c == null) return [];
-        const verses = c!.v.map(
-          (v, vNum): VerseData => ({
-            chapterVerse: [cNum, vNum],
-            words: v.w as string[],
-            translation: transBook && transBook[i]?.text[cNum][vNum],
-          }),
-        );
-        if (cNum === begChapter) return verses.slice(begVerse);
-        else if (cNum === endChapter) return verses.slice(0, endVerse + 1);
-        else return verses;
-      })
-      .slice(begChapter, endChapter + 1)
-      .flat();
+    return b.c.flatMap((c, cNum) => {
+      if (cNum < begChapter || cNum > endChapter) return [];
+      const verses = c!.v.map(
+        (v, vNum): VerseData => ({
+          chapterVerse: [cNum, vNum],
+          words: v.w as string[],
+          translation: transBook && transBook[i]?.text[cNum][vNum],
+        }),
+      );
+      const sliceStart = cNum === begChapter ? begVerse : 0;
+      const sliceEnd = cNum === endChapter ? endVerse + 1 : verses.length;
+      return sliceStart === 0 && sliceEnd === verses.length
+        ? verses
+        : verses.slice(sliceStart, sliceEnd);
+    });
   });
 
 type PlayViewProps = {
@@ -225,7 +214,7 @@ export function PlayView({
     return (
       <View style={{ height: "100%" }}>
         <Modal
-          animationType={"slide"}
+          animationType="slide"
           transparent={false}
           visible={modalVisible}
           onRequestClose={() => console.log("Modal has been closed.")}
@@ -237,14 +226,10 @@ export function PlayView({
         </Modal>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
-            verses={verses}
-            changeAudioTime={changeAudioTime}
-            wordStyle={wordStyle}
-            activeWordIndex={activeWordIndex}
-            forceLinebreakVerses={forceLinebreakVerses}
+            {...{ verses, changeAudioTime, wordStyle, activeWordIndex, forceLinebreakVerses }}
           />
         </ScrollView>
-        <View style={styles.footer}>
+        <Footer>
           {audio && changeAudioTime ? (
             <FooterButton
               onPress={() => {
@@ -258,10 +243,10 @@ export function PlayView({
               disabled={!audio.loaded}
             />
           ) : (
-            <FooterButton buttonTitle="No audio for aliyah" disabled={true} />
+            <FooterButton buttonTitle="No audio for aliyah" disabled />
           )}
           {buttons}
-        </View>
+        </Footer>
       </View>
     );
   }
@@ -282,57 +267,55 @@ export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps
     setAudioSpeed?.(tempSettings.audioSpeed);
   }, [setAudioSpeed, tempSettings.audioSpeed]);
 
+  const styles = useStyles();
+
   const breishit = "בְּרֵאשִׁ֖ית";
   return (
-    <View style={{ marginTop: 22 }}>
-      <View>
-        <Text style={styles.modalHeader}>Settings</Text>
-        <View style={styles.modalSection}>
-          <Text>Font Size:</Text>
+    <View style={[styles.modalContainer, { height: "100%" }, styles.baseBackground]}>
+      <Text style={styles.modalHeader}>Settings</Text>
+      <ModalSection>
+        <Text>Font Size:</Text>
+        <Slider
+          minimumValue={0.5}
+          maximumValue={2}
+          value={tempSettings.textSize}
+          onValueChange={(textSize) => updateTempSettings({ textSize })}
+        />
+        <Word word={breishit} wordStyle={getWordStyle(false, tempSettings.textSize)} />
+        <Word word={breishit} wordStyle={getWordStyle(true, tempSettings.textSize)} />
+      </ModalSection>
+      {setAudioSpeed && (
+        <ModalSection>
+          <Text>Set Audio Speed:</Text>
           <Slider
             minimumValue={0.5}
             maximumValue={2}
-            value={tempSettings.textSize}
-            onValueChange={(textSize) => updateTempSettings({ textSize })}
+            value={tempSettings.audioSpeed}
+            onSlidingComplete={(audioSpeed) => updateTempSettings({ audioSpeed })}
           />
-          <Word word={breishit} wordStyle={getWordStyle(false, tempSettings.textSize)} />
-          <Word word={breishit} wordStyle={getWordStyle(true, tempSettings.textSize)} />
-        </View>
-        {setAudioSpeed && (
-          <View style={styles.modalSection}>
-            <Text>Set Audio Speed:</Text>
-            <Slider
-              minimumValue={0.5}
-              maximumValue={2}
-              value={tempSettings.audioSpeed}
-              onSlidingComplete={(audioSpeed) => updateTempSettings({ audioSpeed })}
-            />
-          </View>
-        )}
+        </ModalSection>
+      )}
 
-        <View
-          style={[styles.modalSection, { flexDirection: "row", justifyContent: "space-between" }]}
-        >
-          <Text>Israeli Holiday Scheme?</Text>
-          <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
-        </View>
+      <ModalSection style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <Text>Israeli Holiday Scheme?</Text>
+        <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
+      </ModalSection>
 
-        <View style={styles.modalFooter}>
-          <CustomButton
-            onPress={() => {
-              updateSettings(tempSettings);
-              closeSettings();
-            }}
-            buttonTitle="Save Settings"
-          />
-          <CustomButton
-            onPress={() => {
-              closeSettings();
-              setAudioSpeed?.(settings.audioSpeed);
-            }}
-            buttonTitle="Cancel"
-          />
-        </View>
+      <View style={styles.modalFooter}>
+        <CustomButton
+          onPress={() => {
+            updateSettings(tempSettings);
+            closeSettings();
+          }}
+          buttonTitle="Save Settings"
+        />
+        <CustomButton
+          onPress={() => {
+            closeSettings();
+            setAudioSpeed?.(settings.audioSpeed);
+          }}
+          buttonTitle="Cancel"
+        />
       </View>
     </View>
   );
@@ -361,42 +344,40 @@ const Verses = React.memo(function Verses({
   changeAudioTime,
   wordStyle,
 }: VersesProps) {
-  let lastWordIndex = 0;
+  let curWordIndex = 0;
   let anyTrans = false;
   const verseText = verses.map((verse, i) => {
     anyTrans ||= verse.translation != null;
-    const nextWordIndex = lastWordIndex + verse.words.length;
+    const nextWordIndex = curWordIndex + verse.words.length;
     const key = verse.chapterVerse?.join(":") ?? i;
+    const verseActive =
+      activeWordIndex != null && curWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex;
     const ret = (
       <Verse
-        key={key}
-        verse={verse}
-        curWordIndex={lastWordIndex}
-        changeAudioTime={changeAudioTime}
-        wordStyle={wordStyle}
+        {...{ key, verse, curWordIndex, changeAudioTime, wordStyle }}
         // let React.memo work its magic when this Verse doesn't have the active word anyway
-        activeWordIndex={
-          activeWordIndex && lastWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex
-            ? activeWordIndex
-            : null
-        }
+        activeWordIndex={verseActive ? activeWordIndex : null}
       />
     );
-    lastWordIndex = nextWordIndex;
+    curWordIndex = nextWordIndex;
     return ret;
   });
 
   return forceLinebreakVerses || anyTrans ? <View>{verseText}</View> : <Text>{verseText}</Text>;
 });
 
-const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) =>
-  ({
-    deleteRegex: tikkun ? /[\/\u0591-\u05C7]/g : /\//g,
-    style: [
-      tikkun ? styles.stam : styles.word,
-      { fontSize: (tikkun ? 30 : 36) * textSizeMultiplier },
-    ],
-  }) as const;
+const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
+  const deleteRegex = tikkun ? /[\/\u0591-\u05C7]/g : /\//g;
+  const fontFamily = tikkun ? tikkunFont : hebFont;
+  const fontMul = tikkun ? 30 : 36;
+  return {
+    deleteRegex,
+    style: {
+      fontFamily,
+      fontSize: fontMul * textSizeMultiplier,
+    },
+  };
+};
 
 type WordStyle = ReturnType<typeof getWordStyle>;
 
@@ -415,16 +396,13 @@ const Verse = React.memo(function Verse(props: VerseProps) {
     return (
       <Word
         key={wordIndex}
-        wordIndex={wordIndex}
+        {...{ word, wordIndex, wordStyle, changeAudioTime }}
         active={wordIndex === activeWordIndex}
         verseNum={
           i === 0 && verse.chapterVerse
             ? `${verse.chapterVerse[0] + 1}:${verse.chapterVerse[1] + 1}`
             : undefined
         }
-        word={word as string}
-        wordStyle={wordStyle}
-        changeAudioTime={changeAudioTime}
       />
     );
   });
@@ -456,8 +434,10 @@ type WordProps = WordIndexInfo & {
 };
 
 function Word({ word, wordStyle, verseNum, active, wordIndex, changeAudioTime }: WordProps) {
+  const styles = useStyles();
+
   const wordElem = (
-    <Text style={[wordStyle.style, active && styles.active]}>
+    <Text style={[styles.word, wordStyle.style, active && styles.active]}>
       {word.replace(wordStyle.deleteRegex, "")}
     </Text>
   );
@@ -467,7 +447,7 @@ function Word({ word, wordStyle, verseNum, active, wordIndex, changeAudioTime }:
       disabled={!changeAudioTime}
     >
       {verseNum ? (
-        <Text style={wordStyle.style[0]}>
+        <Text style={{ fontFamily: wordStyle.style.fontFamily }}>
           <View style={styles.verseNumWrapper}>
             <Text style={styles.verseNum}>{verseNum}</Text>
           </View>

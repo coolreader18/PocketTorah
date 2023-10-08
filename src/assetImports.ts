@@ -601,9 +601,11 @@ export const audio = {
   },
 };
 
+export const hebFont = "Taamey Frank Taamim Fix";
+export const tikkunFont = "Stam Ashkenaz CLM";
 export const fonts = {
-  "Taamey Frank Taamim Fix": require("../fonts/TaameyFrank-taamim-fix.ttf"),
-  "Stam Ashkenaz CLM": require("../fonts/stamashkenazclm-webfont.ttf"),
+  [hebFont]: require("../fonts/TaameyFrank-taamim-fix.ttf"),
+  [tikkunFont]: require("../fonts/stamashkenazclm-webfont.ttf"),
 };
 
 export const tropeAudio: { [k in TropeType]: { [i: number]: any } } = {

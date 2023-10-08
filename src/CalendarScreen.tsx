@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import { HDate } from "@hebcal/core";
 import { getLeyningOnDate, Leyning } from "@hebcal/leyning";
-import { Calendar } from "react-native-calendars";
+import { Calendar, CalendarProvider } from "react-native-calendars";
 import { MarkedDates } from "react-native-calendars/src/types";
 import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
 import { toMarkingFormat } from "react-native-calendars/src/interface";
 import { useSettings } from "./settings";
 import { ScreenProps, dateToStr } from "./App";
+import { useCalendarTheme } from "./theming";
 
 export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [{ il }] = useSettings();
+  const theme = useCalendarTheme();
   return (
     <Calendar
-      disableAllTouchEventsForDisabledDays={true}
-      disableAllTouchEventsForInactiveDays={true}
-      disabledByDefault={true}
+      theme={theme}
+      disableAllTouchEventsForDisabledDays
+      disableAllTouchEventsForInactiveDays
+      disabledByDefault
       markedDates={{
         [toMarkingFormat(new Date())]: { inactive: true },
         ...getMarkedDates(year, il),

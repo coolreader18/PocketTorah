@@ -12,6 +12,12 @@
       body {
         overflow: hidden;
       }
+      @media (prefers-color-scheme: dark) {
+        /* show extensions such as DarkReader that we have a dark theme */
+        body {
+          background-color: #000;
+        }
+      }
       #app {
         display: flex;
         height: 100%;
