@@ -24,7 +24,7 @@ import binarySearch from "binary-search";
 import { usePromise, useScreenOptions, useScreenTitle } from "./utils";
 import { useAudio } from "./useAudio";
 import { AliyahNum, ScreenProps, getLeyning, Parshah, fixReadingId, NavigationProp } from "./App";
-import { Footer, FooterButton, ModalSection, Text, useStyles } from "./theming";
+import { Footer, FooterButton, ModalSection, Text, useStyles, wrapComponent } from "./theming";
 import { CustomButton } from "./theming";
 import { useFonts } from "expo-font";
 import { UpdateSettings, useSettings } from "./settings";
@@ -297,9 +297,11 @@ export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps
         </ModalSection>
       )}
 
-      <ModalSection style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text>Israeli Holiday Scheme?</Text>
-        <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
+      <ModalSection>
+        <SettingsRow>
+          <Text>Israeli Holiday Scheme?</Text>
+          <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
+        </SettingsRow>
       </ModalSection>
 
       <View style={styles.modalFooter}>
@@ -318,9 +320,27 @@ export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps
           buttonTitle="Cancel"
         />
       </View>
+
+      <ModalSection>
+        <SettingsRow>
+          <Text>Color Scheme</Text>
+          <View style={{ flexDirection: "row" }}>
+            {(["auto", "light", "dark"] as const).map((colorTheme) => (
+              <TouchableOpacity key={colorTheme} onPress={() => updateSettings({ colorTheme })}>
+                <Text style={[{ padding: 4 }, settings.colorTheme === colorTheme && styles.active]}>
+                  {titlecase(colorTheme)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </SettingsRow>
+      </ModalSection>
     </View>
   );
 }
+
+const SettingsRow = wrapComponent(View, "settingsRow");
+const titlecase = (s: string) => s.slice(0, 1).toUpperCase() + s.slice(1);
 
 function parseChV(s: string): [number, number] {
   const [ch, v] = s.split(":");

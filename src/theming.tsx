@@ -103,6 +103,10 @@ const makeStyles = (dark: boolean) => {
       marginLeft: 10,
       marginTop: 5,
     },
+    settingsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
   });
 };
 
