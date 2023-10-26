@@ -10,6 +10,8 @@ export interface Settings {
   il: boolean;
   /** Color theme */
   colorTheme: ColorTheme;
+  /** Triennial reading scheme */
+  tri: boolean;
 }
 
 type ColorTheme = "auto" | "light" | "dark";
@@ -19,9 +21,10 @@ const defaultSettings: Settings = {
   audioSpeed: 1,
   il: false,
   colorTheme: "auto",
+  tri: false,
 };
 
-const settingsFields = ["textSize", "audioSpeed", "il", "colorTheme"] as const;
+const settingsFields = ["textSize", "audioSpeed", "il", "colorTheme", "tri"] as const;
 
 type MutuallyAssignable<T extends U, U extends V, V = T> = true;
 (_: MutuallyAssignable<(typeof settingsFields)[number], keyof Settings>) => {};

@@ -1,7 +1,8 @@
-import { NavigationProp, ParamListBase } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import { NavigationProp } from "@react-navigation/native";
+import React, { useEffect, useState } from "react";
 import { Platform } from "react-native";
+
+export type Maybe<T> = { [k in keyof T]?: undefined } | T;
 
 export const platformSelect = <T>(plats: { [k in Platform["OS"]]?: T }, default_: T): T =>
   Platform.OS in plats ? plats[Platform.OS]! : default_;
@@ -56,3 +57,5 @@ export function useScreenTitle(
 ) {
   useScreenOptions(navigation, { title }, [title]);
 }
+
+export const ensureArray = <T>(x: T | T[]): T[] => (Array.isArray(x) ? x : [x]);

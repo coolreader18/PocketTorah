@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import maftirOffset from "../data/maftirOffset.json";
-import { lookupParsha, BOOK, Leyning, Aliyah } from "@hebcal/leyning";
+import { lookupParsha, BOOK, Aliyah } from "@hebcal/leyning";
 import {
   audio as audioMap,
   labels as labelsMap,
@@ -21,9 +21,10 @@ import {
   hebFont,
 } from "./assetImports";
 import binarySearch from "binary-search";
-import { usePromise, useScreenOptions, useScreenTitle } from "./utils";
+import { Maybe, ensureArray, usePromise, useScreenOptions, useScreenTitle } from "./utils";
 import { useAudio } from "./useAudio";
-import { AliyahNum, ScreenProps, getLeyning, Parshah, fixReadingId, NavigationProp } from "./App";
+import { AliyahNum, ScreenProps, Parshah, NavigationProp } from "./App";
+import { getLeyning, fixReadingId, Reading } from "./leyning";
 import { Footer, FooterButton, ModalSection, Text, useStyles, wrapComponent } from "./theming";
 import { CustomButton } from "./theming";
 import { useFonts } from "expo-font";
@@ -39,10 +40,8 @@ type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
 type TorahBookName = keyof typeof labelsMap;
 type BookName = keyof typeof transBookMap;
 
-const getReading = (leyning: Leyning, num: AliyahNum) => {
-  const aliyah = num === "H" ? leyning.haft : (leyning.fullkriyah ?? leyning.weekday!)[num];
-  return Array.isArray(aliyah) ? aliyah : [aliyah];
-};
+const getReading = (leyning: Reading, num: AliyahNum) =>
+  ensureArray(num === "H" ? leyning.haftara : leyning.aliyot[num]);
 
 export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
@@ -64,13 +63,21 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   );
 
   const readingId = fixReadingId(params.readingId);
-  const [{ il }] = useSettings();
-  const leyning = useMemo(() => getLeyning(readingId, il), [readingId, il]);
+  const [{ tri, il }] = useSettings();
+  const leyning = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
+
+  useScreenTitle(navigation, leyning?.name.en ?? "404");
+
+  if (!leyning)
+    return (
+      <ScrollView>
+        <Text>No reading for date</Text>
+      </ScrollView>
+    );
+
   const aliyah = getReading(leyning, params.aliyah);
 
   const key = params.aliyah + leyning.name.en;
-
-  useScreenTitle(navigation, leyning.name.en);
 
   // in the files in data/, the maftir is in the 7th aliyah, so we need to
   // adjust for that with startingWordOffset
@@ -78,8 +85,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const parshah = leyning.parsha?.length == 1 ? (leyning.parsha[0] as Parshah) : null;
 
-  const hebcalNum = params.aliyah == "H" ? "haftara" : params.aliyah;
-  const haveAudio = parshah != null && (leyning.reason == null || !(hebcalNum in leyning.reason));
+  const haveAudio = parshah != null && !aliyah.some((aliyah) => "reason" in aliyah) && !tri;
   const audioSource = haveAudio ? audioMap[parshah][dataAliyahNum] : null;
 
   const startingWordOffset =
@@ -299,6 +305,10 @@ export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps
 
       <ModalSection>
         <SettingsRow>
+          <Text>Triennial?</Text>
+          <Switch value={tempSettings.tri} onValueChange={(tri) => updateTempSettings({ tri })} />
+        </SettingsRow>
+        <SettingsRow>
           <Text>Israeli Holiday Scheme?</Text>
           <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
         </SettingsRow>
@@ -439,12 +449,8 @@ const Verse = React.memo(function Verse(props: VerseProps) {
   );
 });
 
-type Maybe<T> = T | { [k in keyof T]?: never };
-type MaybeAnd<T, U> = (Maybe<T> & { [k in keyof U]?: never }) | (T & Maybe<U>);
-
-type WordIndexInfo = MaybeAnd<
-  { wordIndex: number },
-  { changeAudioTime: (wordIndex: number) => void }
+type WordIndexInfo = Maybe<
+  { wordIndex: number } & Maybe<{ changeAudioTime: (wordIndex: number) => void }>
 >;
 
 type WordProps = WordIndexInfo & {

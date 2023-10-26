@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { HDate } from "@hebcal/core";
-import { getLeyningOnDate, Leyning } from "@hebcal/leyning";
+import { getLeyningOnDate, Reading } from "./leyning";
 import { Calendar, CalendarProvider } from "react-native-calendars";
 import { MarkedDates } from "react-native-calendars/src/types";
 import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
@@ -11,7 +11,7 @@ import { useCalendarTheme } from "./theming";
 
 export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {
   const [year, setYear] = useState(() => new Date().getFullYear());
-  const [{ il }] = useSettings();
+  const [{ tri, il }] = useSettings();
   const theme = useCalendarTheme();
   return (
     <Calendar
@@ -21,12 +21,13 @@ export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {
       disabledByDefault
       markedDates={{
         [toMarkingFormat(new Date())]: { inactive: true },
-        ...getMarkedDates(year, il),
+        ...getMarkedDates(year, { tri, il }),
       }}
       onMonthChange={({ month, year }) => {
         setYear(year);
-        if (month <= 2) Promise.resolve().then(() => fillMarkedDatesCache(year - 1, il));
-        else if (month >= 11) Promise.resolve().then(() => fillMarkedDatesCache(year + 1, il));
+        if (month <= 2) Promise.resolve().then(() => fillMarkedDatesCache(year - 1, { tri, il }));
+        else if (month >= 11)
+          Promise.resolve().then(() => fillMarkedDatesCache(year + 1, { tri, il }));
       }}
       onDayPress={({ year, month, day }) => {
         navigation.navigate("AliyahSelectScreen", {
@@ -40,10 +41,15 @@ type MarkedCache = {
   markedYears: Set<number>;
   markedDates: MarkedDates;
 };
-const markedCacheChul: MarkedCache = { markedYears: new Set(), markedDates: {} };
-const markedCacheIl: MarkedCache = { markedYears: new Set(), markedDates: {} };
-const fillMarkedDatesCache = (year: number, il: boolean): MarkedDates => {
-  const { markedYears, markedDates } = il ? markedCacheIl : markedCacheChul;
+const markedCache: { [k in `${boolean}-${boolean}`]?: MarkedCache } = Object.create(null);
+const fillMarkedDatesCache = (
+  year: number,
+  { tri, il }: { tri: boolean; il: boolean },
+): MarkedDates => {
+  const { markedYears, markedDates } = (markedCache[`${tri}-${il}`] ??= {
+    markedYears: new Set(),
+    markedDates: {},
+  });
   if (markedYears.has(year)) return markedDates;
   markedYears.add(year);
   const endDate = new HDate(new Date(year, 11, 31));
@@ -52,26 +58,19 @@ const fillMarkedDatesCache = (year: number, il: boolean): MarkedDates => {
     date.abs() <= endDate.abs();
     date = date.next()
   ) {
-    const l = getLeyningOnDate(date, il);
+    const l = getLeyningOnDate(date, { tri, il });
     if (l) {
       markedDates[toMarkingFormat(date.greg())] = leyningToProps(l);
     }
   }
   return markedDates;
 };
-const leyningToProps = (leyning: Leyning): MarkingProps => ({
+const leyningToProps = (leyning: Reading): MarkingProps => ({
   marked: true,
   disabled: false,
-  dotColor:
-    leyning.parsha == null
-      ? "red"
-      : leyning.weekday
-      ? "green"
-      : leyning.reason
-      ? "blue"
-      : "darkblue",
+  dotColor: { chag: "red", weekday: "green", shabbat: "darkblue" }[leyning.kind],
 });
-const getMarkedDates = (year: number, il: boolean) => {
-  const markedDates = fillMarkedDatesCache(year, il);
+const getMarkedDates = (year: number, { tri, il }: { tri: boolean; il: boolean }) => {
+  const markedDates = fillMarkedDatesCache(year, { tri, il });
   return { ...markedDates };
 };

@@ -22,7 +22,7 @@ import {
 } from "@react-navigation/stack";
 
 import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
-import { getLeyningOnDate, getLeyningForParsha, formatAliyahShort, Leyning } from "@hebcal/leyning";
+import { formatAliyahShort } from "@hebcal/leyning";
 
 import { audio as audioMap, fonts } from "./assetImports";
 
@@ -33,8 +33,9 @@ import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";
 import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { CustomButton, useNavigationTheme } from "./theming";
+import { CustomButton, Text, useNavigationTheme } from "./theming";
 import { AboutScreen } from "./AboutScreen";
+import { fixReadingId, getLeyning } from "./leyning";
 
 const allParshiot: Parshah[] = [...(hebcalParshiot as Parshah[]), "Vezot Haberakhah"];
 
@@ -83,14 +84,15 @@ function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">)
 
 function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScreen">) {
   const readingId = fixReadingId(route.params.readingId);
-  const [{ il }] = useSettings();
+  const [{ tri, il }] = useSettings();
 
-  const reading = useMemo(() => getLeyning(readingId, il), [readingId]);
+  const reading = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
+  if (!reading) throw new Error(`bad readingid ${readingId}`);
 
-  useScreenTitle(navigation, reading.name.en);
+  useScreenTitle(navigation, reading.name.en ?? "404");
 
-  const kriyah = reading.fullkriyah ?? reading.weekday!;
-  const namePrefix = reading.fullkriyah ? "" : "Weekday ";
+  const kriyah = reading.aliyot;
+  const namePrefix = reading.kind === "weekday" ? "Weekday " : "";
   const special = !reading.parsha;
 
   const content = aliyahNums
@@ -112,29 +114,10 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
 const aliyahName = (num: AliyahNum) =>
   num === "M" ? "Maftir Aliyah" : num == "H" ? "Haftarah" : `Aliyah ${num}`;
 
-const isParshah = (x: string): x is Parshah => x in audioMap;
-
-export const fixReadingId = (x: ReadingId): ReadingId =>
-  isParshah(x) ? x : (decodeURIComponent(x) as ReadingId);
-export const getLeyning = (readingId: ReadingId, il: boolean): Leyning => {
-  if (isParshah(readingId)) {
-    return getLeyningForParsha(readingId);
-  } else {
-    const d = dateFromStr(readingId);
-    if (!d) throw new Error("bad date");
-    return getLeyningOnDate(d, il);
-  }
-};
-
-declare module "@hebcal/leyning" {
-  export function getLeyningOnDate(hdate: HDate, il: boolean, wantarray?: false): Leyning;
-  export function getLeyningOnDate(hdate: HDate, il: boolean, wantarray: true): Leyning[];
-}
-
 export const dateToStr = (date: HDate) =>
   `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` as const;
 
-const dateFromStr = (str: string): HDate | null => {
+export const dateFromStr = (str: string): HDate | null => {
   const m = /^(\d+)-(\d+)-(\d+)$/.exec(str);
   if (!m) return null;
   return m && new HDate(+m[3], +m[2], +m[1]);
@@ -169,7 +152,7 @@ type Params = {
   TropeSelectScreen: { tropeType: TropeType };
   TropePlayScreen: { tropeType: TropeType; tropeIndex: number };
 };
-type ReadingId = Parshah | `${number}-${number}-${number}`;
+export type ReadingId = Parshah | `${number}-${number}-${number}`;
 const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
 export type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
 export type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
