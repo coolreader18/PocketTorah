@@ -17,6 +17,7 @@ const babelLoaderConfiguration = {
   include: [
     path.resolve(appDirectory, "web"),
     path.resolve(appDirectory, "src"),
+    path.resolve(appDirectory, "data/audio"),
     path.resolve(appDirectory, "node_modules/react-native-uncompiled"),
     path.resolve(appDirectory, "node_modules/react-native-calendars"),
     path.resolve(appDirectory, "node_modules/react-native-swipe-gestures"),
@@ -117,6 +118,9 @@ module.exports = (env) => ({
         ],
       },
     }),
-    new GenerateSW(),
+    new GenerateSW({
+      exclude: [/\.mp3$/, /\.map$/, /^manifest.*\.js$/],
+      // include: [/data\/trope\/audio\/.*\.mp3$/],
+    }),
   ],
 });

@@ -171,12 +171,18 @@ export const TropePlayScreen = ({ navigation, route }: ScreenProps<"TropePlayScr
   const info = tropeTypeInfo[tropeType];
   useScreenTitle(navigation, `${info.title} Tropes - ${info.tropes[tropeIndex - 1]}`);
 
-  const audioSource = tropeAudio[tropeType][tropeIndex];
+  const audioSource = [tropeAudio[tropeType][tropeIndex]];
 
   const audioLabels = useMemo(
-    () => Promise.resolve(tropeLabels[tropeType][tropeIndex]),
+    () => Promise.resolve([tropeLabels[tropeType][tropeIndex]]),
     [tropeType, tropeIndex],
   );
 
-  return <PlayView {...{ verses, audioSource, audioLabels, navigation }} forceLinebreakVerses />;
+  return (
+    <PlayView
+      {...{ verses, audioSource, audioLabels, navigation }}
+      forceLinebreakVerses
+      singleVerseAudio
+    />
+  );
 };

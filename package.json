@@ -9,7 +9,8 @@
     "test": "jest",
     "lint": "eslint .",
     "web-dev": "webpack b --config ./web/webpack.config.js --mode development -w",
-    "web-dist": "webpack b --config ./web/webpack.config.js --mode production"
+    "web-dist": "webpack b --config ./web/webpack.config.js --mode production",
+    "prepare": "node split-audio.mjs"
   },
   "dependencies": {
     "@hebcal/core": "^4.3.4",
