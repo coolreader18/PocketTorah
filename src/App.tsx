@@ -22,7 +22,7 @@ import {
 } from "@react-navigation/stack";
 
 import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
-import { formatAliyahShort } from "@hebcal/leyning";
+import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 
 import { audio as audioMap, fonts } from "./assetImports";
 
@@ -36,8 +36,6 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { CustomButton, Text, useNavigationTheme } from "./theming";
 import { AboutScreen } from "./AboutScreen";
 import { fixReadingId, getLeyning } from "./leyning";
-
-const allParshiot: Parshah[] = [...(hebcalParshiot as Parshah[]), "Vezot Haberakhah"];
 
 function HomeScreen({ navigation }: ScreenProps<"Home">) {
   const { navigate } = navigation;
@@ -103,7 +101,7 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
         onPress={() => navigation.navigate("PlayViewScreen", { readingId, aliyah: num })}
         buttonTitle={`${namePrefix}${aliyahName(num)}: ${
           num === "H"
-            ? reading.haftara
+            ? makeSummaryFromParts(reading.haftara)
             : formatAliyahShort(kriyah[num], special || kriyah[num].k != kriyah[1].k)
         }`}
       />
@@ -123,7 +121,64 @@ export const dateFromStr = (str: string): HDate | null => {
   return m && new HDate(+m[3], +m[2], +m[1]);
 };
 
-export type Parshah = keyof typeof audioMap;
+export type Parshah = (typeof allParshiot)[number];
+export const isParshah = (x: string): x is Parshah => allParshiot.includes(x);
+const allParshiot = [
+  "Bereshit",
+  "Noach",
+  "Lech-Lecha",
+  "Vayera",
+  "Chayei Sara",
+  "Toldot",
+  "Vayetzei",
+  "Vayishlach",
+  "Vayeshev",
+  "Miketz",
+  "Vayigash",
+  "Vayechi",
+  "Shemot",
+  "Vaera",
+  "Bo",
+  "Beshalach",
+  "Yitro",
+  "Mishpatim",
+  "Terumah",
+  "Tetzaveh",
+  "Ki Tisa",
+  "Vayakhel",
+  "Pekudei",
+  "Vayikra",
+  "Tzav",
+  "Shmini",
+  "Tazria",
+  "Metzora",
+  "Achrei Mot",
+  "Kedoshim",
+  "Emor",
+  "Behar",
+  "Bechukotai",
+  "Bamidbar",
+  "Nasso",
+  "Beha'alotcha",
+  "Sh'lach",
+  "Korach",
+  "Chukat",
+  "Balak",
+  "Pinchas",
+  "Matot",
+  "Masei",
+  "Devarim",
+  "Vaetchanan",
+  "Eikev",
+  "Re'eh",
+  "Shoftim",
+  "Ki Teitzei",
+  "Ki Tavo",
+  "Nitzavim",
+  "Vayeilech",
+  "Ha'azinu",
+  "Vezot Haberakhah",
+] as const;
 
 const SettingsScreen = ({ navigation }: ScreenProps<"Settings">) => (
   <PlaySettings

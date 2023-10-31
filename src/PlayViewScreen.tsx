@@ -30,6 +30,7 @@ import { CustomButton } from "./theming";
 import { useFonts } from "expo-font";
 import { UpdateSettings, useSettings } from "./settings";
 import { AVPlaybackSource } from "expo-av";
+import { numverses } from "./numVerses";
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];
@@ -37,8 +38,7 @@ type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
   [k in keyof T]: Awaited<ReturnType<T[k]>>["default"];
 };
 
-type TorahBookName = keyof typeof labelsMap;
-type BookName = keyof typeof transBookMap;
+export type BookName = keyof typeof audioMap;
 
 const getReading = (leyning: Reading, num: AliyahNum) =>
   ensureArray(num === "H" ? leyning.haftara : leyning.aliyot[num]);
@@ -75,28 +75,35 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
       </ScrollView>
     );
 
-  const aliyah = getReading(leyning, params.aliyah);
+  const aliyah = useMemo(
+    () => leyning && getReading(leyning, params.aliyah),
+    [leyning, params.aliyah],
+  );
+
+  const verseInfo = useMemo(() => aliyah && aliyah.map(extractVerses), [aliyah]);
 
   const key = params.aliyah + leyning.name.en;
 
-  // in the files in data/, the maftir is in the 7th aliyah, so we need to
-  // adjust for that with startingWordOffset
-  const dataAliyahNum = params.aliyah === "M" ? "7" : params.aliyah;
+  const audioSource: AVPlaybackSource[] | null = useMemo(() => {
+    const arr = verseInfo.flat().map(({ book, chapterVerse, sof }) => {
+      const src = audioMap[book][fmtChV(chapterVerse!)]?.();
+      return src && (sof ? src.sof ?? src.reg : src.reg ?? src.sof);
+    });
+    return arr.some((v) => v == null) ? null : (arr as AVPlaybackSource[]);
+  }, [verseInfo]);
+  const haveAudio = audioSource != null;
 
-  const parshah = leyning.parsha?.length == 1 ? (leyning.parsha[0] as Parshah) : null;
-
-  const haveAudio = parshah != null && !aliyah.some((aliyah) => "reason" in aliyah) && !tri;
-  const audioSource = haveAudio ? audioMap[parshah][dataAliyahNum] : null;
-
-  const startingWordOffset =
-    haveAudio && params.aliyah === "M" && parshah != "Vezot Haberakhah" ? maftirOffset[parshah] : 0;
-
-  const labelsPromise: Promise<number[]> = useMemo(async () => {
+  const labelsPromise: Promise<number[][]> = useMemo(async () => {
     if (!haveAudio) return await Promise.race([]);
-    const parshahBook = BOOK[lookupParsha(parshah).book] as TorahBookName;
-    const { default: labels } = await labelsMap[parshahBook]();
-    return (labels as any)[parshah]![dataAliyahNum];
-  }, [key]);
+    return Promise.all(
+      verseInfo.flat().map(({ book, chapterVerse }) =>
+        // TODO: different labels for sof/reg
+        labelsMap[book]().then(
+          ({ default: labels }) => (labels as Record<string, number[]>)[fmtChV(chapterVerse!)],
+        ),
+      ),
+    );
+  }, [verseInfo]);
 
   const book = usePromise<Book[]>(
     () => Promise.all(aliyah.map(({ k }) => bookMap[k as BookName]())),
@@ -109,51 +116,70 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const transBook = translationOn ? transBook_ : undefined;
 
-  const verses = book && transBook !== null ? extractVerseData(aliyah, book, transBook) : null;
+  const verses =
+    book && transBook !== null
+      ? verseInfo.flatMap((verse, i) => getVerseData(verse, book[i], transBook?.[i]))
+      : null;
 
   return (
     <PlayView
       audioLabels={labelsPromise}
       tikkun={tikkunOn}
-      {...{ verses, startingWordOffset, audioSource, buttons, navigation }}
+      {...{ verses, audioSource, buttons, navigation }}
     />
   );
 }
-const extractVerseData = (aliyah: Aliyah[], book: Book[], transBook?: TransBook[]): VerseData[] =>
-  aliyah.flatMap((aliyah, i) => {
-    const b = book[i].Tanach.tanach.book;
-    // these values are 0-indexed and **inclusive**
-    const [begChapter, begVerse] = parseChV(aliyah.b);
-    const [endChapter, endVerse] = parseChV(aliyah.e);
-    return b.c.flatMap((c, cNum) => {
-      if (cNum < begChapter || cNum > endChapter) return [];
-      const verses = c!.v.map(
-        (v, vNum): VerseData => ({
-          chapterVerse: [cNum, vNum],
-          words: v.w as string[],
-          translation: transBook && transBook[i]?.text[cNum][vNum],
-        }),
-      );
-      const sliceStart = cNum === begChapter ? begVerse : 0;
-      const sliceEnd = cNum === endChapter ? endVerse + 1 : verses.length;
-      return sliceStart === 0 && sliceEnd === verses.length
-        ? verses
-        : verses.slice(sliceStart, sliceEnd);
-    });
+
+const range = (n: number): null[] => Array(n).fill(null);
+
+function slice<T>(arr: T[], start: number, end: number): T[] {
+  if (start === 0 && end === arr.length) return arr;
+  return arr.slice(start, end);
+}
+
+const extractVerses = (aliyah: Aliyah): Verse[] => {
+  // these values are 0-indexed and **inclusive**
+  const [begChapter, begVerse] = parseChV(aliyah.b);
+  const [endChapter, endVerse] = parseChV(aliyah.e);
+  const ret = numverses[aliyah.k as keyof typeof numverses].slice(1).flatMap((numV, cNum) => {
+    if (cNum < begChapter || cNum > endChapter) return [];
+    const verses = range(numV).map(
+      (_, vNum): Verse => ({ book: aliyah.k as BookName, chapterVerse: [cNum, vNum], sof: false }),
+    );
+    const sliceStart = cNum === begChapter ? begVerse : 0;
+    const sliceEnd = cNum === endChapter ? endVerse + 1 : verses.length;
+    return slice(verses, sliceStart, sliceEnd);
+  });
+  ret[ret.length - 1].sof = true;
+  return ret;
+};
+
+const getVerseData = (verses: Verse[], book: Book, transBook?: TransBook): VerseData[] =>
+  verses.map((v) => {
+    const [cNum, vNum] = v.chapterVerse!;
+    return {
+      ...v,
+      words: book.Tanach.tanach.book.c![cNum]!.v[vNum].w as string[],
+      translation: transBook?.text[cNum][vNum],
+    };
   });
 
 type PlayViewProps = {
   verses: VerseData[] | null;
-  audioSource: AVPlaybackSource | null;
-  audioLabels: Promise<number[]>;
+  audioSource: AVPlaybackSource[] | null;
+  audioLabels: Promise<number[][]>;
   tikkun?: boolean;
   buttons?: React.ReactNode;
-  startingWordOffset?: number;
   navigation: NavigationProp;
   forceLinebreakVerses?: boolean;
+  singleVerseAudio?: boolean;
 };
-export type VerseData = {
+export type Verse = {
+  book: BookName;
   chapterVerse?: [number, number];
+  sof: boolean;
+};
+export type VerseData = Verse & {
   words: string[];
   translation?: string;
 };
@@ -163,9 +189,9 @@ export function PlayView({
   audioLabels,
   tikkun = false,
   buttons,
-  startingWordOffset = 0,
   navigation,
   forceLinebreakVerses = false,
+  singleVerseAudio = false,
 }: PlayViewProps) {
   const [{ textSize: textSizeMultiplier, audioSpeed }] = useSettings();
 
@@ -192,13 +218,19 @@ export function PlayView({
 
   const changeAudioTime = useMemo(
     () =>
-      audio
-        ? async (wordIndex: number) => {
-            const newTime = (await audioLabels)[wordIndex - startingWordOffset];
-            audio.setCurrentTime(newTime);
+      audio && verses
+        ? async (verseIndex: number, wordIndex: number) => {
+            if (singleVerseAudio) {
+              wordIndex += verses
+                .slice(0, verseIndex)
+                .reduce((a, { words }) => a + words.length, 0);
+              verseIndex = 0;
+            }
+            const newTime = (await audioLabels)[verseIndex][wordIndex];
+            audio.setCurrentTime(verseIndex, newTime);
           }
         : undefined,
-    [audioLabels, startingWordOffset, audio?.setCurrentTime],
+    [audioLabels, verses, audio?.setCurrentTime],
   );
 
   if (!fontsLoaded || !verses) {
@@ -211,12 +243,25 @@ export function PlayView({
   } else {
     const unBitwiseNot = (x: number) => (x < 0 ? ~x : x);
     const audioInactive = audio == null || (!audio.playing && audio.currentTime == 0);
-    const activeWordIndex =
+    let activeWordIndex =
       audioInactive || !labels
         ? null
-        : unBitwiseNot(binarySearch(labels, audio.currentTime, (a, b) => (a === b ? -1 : a - b))) -
-          1 -
-          startingWordOffset;
+        : unBitwiseNot(
+            binarySearch(labels[audio.currentTrack], audio.currentTime, (a, b) =>
+              a === b ? -1 : a - b,
+            ),
+          ) - 1;
+    const activeVerseIndex =
+      audioInactive || !labels
+        ? null
+        : singleVerseAudio
+        ? activeWordIndex &&
+          verses.findIndex((v) => {
+            const ret = activeWordIndex! < v.words.length;
+            if (!ret) activeWordIndex! -= v.words.length;
+            return ret;
+          })
+        : audio.currentTrack;
 
     return (
       <View style={{ height: "100%" }}>
@@ -233,7 +278,14 @@ export function PlayView({
         </Modal>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
-            {...{ verses, changeAudioTime, wordStyle, activeWordIndex, forceLinebreakVerses }}
+            {...{
+              verses,
+              changeAudioTime,
+              wordStyle,
+              activeVerseIndex,
+              activeWordIndex,
+              forceLinebreakVerses,
+            }}
           />
         </ScrollView>
         <Footer>
@@ -241,9 +293,10 @@ export function PlayView({
             <FooterButton
               onPress={() => {
                 if (audioInactive) {
-                  changeAudioTime(0);
+                  changeAudioTime(0, 0);
                 } else {
-                  audio.toggle();
+                  if (audio.playing) audio.pause();
+                  else audio.play();
                 }
               }}
               buttonTitle={audio.loaded ? (audio.playing ? "Pause" : "Play") : "Audio loading..."}
@@ -362,14 +415,16 @@ type TransBook = ImportType<typeof transBookMap>;
 
 type VersesProps = {
   verses: VerseData[];
+  activeVerseIndex: number | null;
   activeWordIndex: number | null;
   forceLinebreakVerses: boolean;
-  changeAudioTime: ((wordIndex: number) => void) | undefined;
+  changeAudioTime: ChangeAudioTime | undefined;
   wordStyle: WordStyle;
 };
 
 const Verses = React.memo(function Verses({
   verses,
+  activeVerseIndex,
   activeWordIndex,
   forceLinebreakVerses,
   changeAudioTime,
@@ -377,20 +432,16 @@ const Verses = React.memo(function Verses({
 }: VersesProps) {
   let curWordIndex = 0;
   let anyTrans = false;
-  const verseText = verses.map((verse, i) => {
+  const verseText = verses.map((verse, verseIndex) => {
     anyTrans ||= verse.translation != null;
-    const nextWordIndex = curWordIndex + verse.words.length;
-    const key = verse.chapterVerse?.join(":") ?? i;
-    const verseActive =
-      activeWordIndex != null && curWordIndex <= activeWordIndex && activeWordIndex < nextWordIndex;
+    const key = verse.chapterVerse?.join(":") ?? verseIndex;
     const ret = (
       <Verse
-        {...{ key, verse, curWordIndex, changeAudioTime, wordStyle }}
-        // let React.memo work its magic when this Verse doesn't have the active word anyway
-        activeWordIndex={verseActive ? activeWordIndex : null}
+        {...{ key, verse, verseIndex, changeAudioTime, wordStyle }}
+        activeWordIndex={activeVerseIndex === verseIndex ? activeWordIndex : null}
       />
     );
-    curWordIndex = nextWordIndex;
+    curWordIndex += verse.words.length;
     return ret;
   });
 
@@ -414,26 +465,23 @@ type WordStyle = ReturnType<typeof getWordStyle>;
 
 type VerseProps = {
   verse: VerseData;
-  changeAudioTime: ((wordIndex: number) => void) | undefined;
+  changeAudioTime: ChangeAudioTime | undefined;
   wordStyle: WordStyle;
-  curWordIndex: number;
+  verseIndex: number;
   activeWordIndex: number | null;
 };
 
+const fmtChV = ([cNum, vNum]: [number, number]) => `${cNum + 1}:${vNum + 1}`;
+
 const Verse = React.memo(function Verse(props: VerseProps) {
-  const { verse, changeAudioTime, wordStyle, curWordIndex, activeWordIndex } = props;
-  const words = verse.words.map((word, i) => {
-    const wordIndex = curWordIndex + i;
+  const { verse, changeAudioTime, wordStyle, verseIndex, activeWordIndex } = props;
+  const words = verse.words.map((word, wordIndex) => {
     return (
       <Word
         key={wordIndex}
-        {...{ word, wordIndex, wordStyle, changeAudioTime }}
+        {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime }}
         active={wordIndex === activeWordIndex}
-        verseNum={
-          i === 0 && verse.chapterVerse
-            ? `${verse.chapterVerse[0] + 1}:${verse.chapterVerse[1] + 1}`
-            : undefined
-        }
+        verseNum={wordIndex === 0 && verse.chapterVerse ? fmtChV(verse.chapterVerse) : undefined}
       />
     );
   });
@@ -449,8 +497,10 @@ const Verse = React.memo(function Verse(props: VerseProps) {
   );
 });
 
+type ChangeAudioTime = (verseIndex: number, wordIndex: number) => void;
+
 type WordIndexInfo = Maybe<
-  { wordIndex: number } & Maybe<{ changeAudioTime: (wordIndex: number) => void }>
+  { verseIndex: number; wordIndex: number } & Maybe<{ changeAudioTime: ChangeAudioTime }>
 >;
 
 type WordProps = WordIndexInfo & {
@@ -460,7 +510,15 @@ type WordProps = WordIndexInfo & {
   active?: boolean;
 };
 
-function Word({ word, wordStyle, verseNum, active, wordIndex, changeAudioTime }: WordProps) {
+function Word({
+  word,
+  wordStyle,
+  verseNum,
+  active,
+  verseIndex,
+  wordIndex,
+  changeAudioTime,
+}: WordProps) {
   const styles = useStyles();
 
   const wordElem = (
@@ -470,7 +528,7 @@ function Word({ word, wordStyle, verseNum, active, wordIndex, changeAudioTime }:
   );
   return (
     <TouchableOpacity
-      onPress={changeAudioTime && (() => changeAudioTime(wordIndex))}
+      onPress={changeAudioTime && (() => changeAudioTime(verseIndex, wordIndex))}
       disabled={!changeAudioTime}
     >
       {verseNum ? (

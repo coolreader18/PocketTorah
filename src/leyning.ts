@@ -7,7 +7,7 @@ import {
   Leyning,
 } from "@hebcal/leyning";
 import { Triennial, getTriennial, getTriennialForParshaHaShavua } from "@hebcal/triennial";
-import { Parshah, ReadingId, dateFromStr } from "./App";
+import { isParshah, ReadingId, dateFromStr } from "./App";
 import { audio as audioMap } from "./assetImports";
 import { ensureArray } from "./utils";
 
@@ -29,7 +29,7 @@ const leyningToReading = (leyning: Leyning): Reading => ({
 const triennialToReading = (baseReading: Reading, triennial: TriennialAliyot): Reading => ({
   ...baseReading,
   aliyot: triennial.aliyot,
-  haftara: ensureArray(triennial.haft),
+  haftara: ensureArray(triennial.haft ?? baseReading.haftara),
 });
 
 export function getLeyningOnDate(
@@ -59,8 +59,6 @@ export type TriennialAliyot = import("@hebcal/triennial").TriennialAliyot & {
   haft: Aliyah | Aliyah[];
   haftara: string;
 };
-
-const isParshah = (x: string): x is Parshah => x in audioMap;
 
 export const fixReadingId = (x: ReadingId): ReadingId =>
   isParshah(x) ? x : (decodeURIComponent(x) as ReadingId);
