@@ -22,7 +22,7 @@ import {
 } from "./assetImports";
 import binarySearch from "binary-search";
 import { Maybe, ensureArray, usePromise, useScreenOptions, useScreenTitle } from "./utils";
-import { useAudio } from "./useAudio";
+import { Audio, useAudio } from "./useAudio";
 import { AliyahNum, ScreenProps, Parshah, NavigationProp } from "./App";
 import { getLeyning, fixReadingId, Reading } from "./leyning";
 import { Footer, FooterButton, ModalSection, Text, useStyles, wrapComponent } from "./theming";
@@ -201,20 +201,10 @@ export function PlayView({
 
   const [fontsLoaded] = useFonts(fonts);
 
-  const [modalVisible, setModalVisible] = useState(false);
-
   const wordStyle = useMemo(
     () => getWordStyle(tikkun, textSizeMultiplier),
     [tikkun, textSizeMultiplier],
   );
-
-  useScreenOptions(navigation, {
-    headerRight: () => (
-      <View style={{ marginRight: 5 }}>
-        <Button title="Settings" onPress={() => setModalVisible(true)} />
-      </View>
-    ),
-  });
 
   const changeAudioTime = useMemo(
     () =>
@@ -265,17 +255,7 @@ export function PlayView({
 
     return (
       <View style={{ height: "100%" }}>
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={modalVisible}
-          onRequestClose={() => console.log("Modal has been closed.")}
-        >
-          <PlaySettings
-            closeSettings={() => setModalVisible(false)}
-            setAudioSpeed={audio?.setSpeed}
-          />
-        </Modal>
+        <SettingsModal {...{ navigation, audio }} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
             {...{
@@ -311,6 +291,35 @@ export function PlayView({
     );
   }
 }
+
+export const SettingsModal = ({
+  navigation,
+  audio,
+}: {
+  navigation: NavigationProp;
+  audio: Audio | null;
+}) => {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  useScreenOptions(navigation, {
+    headerRight: () => (
+      <View style={{ marginRight: 5 }}>
+        <Button title="Settings" onPress={() => setModalVisible(true)} />
+      </View>
+    ),
+  });
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={false}
+      visible={modalVisible}
+      onRequestClose={() => console.log("Modal has been closed.")}
+    >
+      <PlaySettings closeSettings={() => setModalVisible(false)} setAudioSpeed={audio?.setSpeed} />
+    </Modal>
+  );
+};
 
 type PlaySettingsProps = {
   closeSettings: () => void;

@@ -6,8 +6,8 @@
  * @flow strict-local
  */
 
-import React, { createContext, useContext, useMemo } from "react";
-import { ScrollView, StyleProp, ViewStyle, useColorScheme } from "react-native";
+import React, { createContext, useContext, useMemo, useState } from "react";
+import { Button, ScrollView, StyleProp, View, ViewStyle, useColorScheme } from "react-native";
 
 import {
   NavigationContainer,
@@ -26,8 +26,8 @@ import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 
 import { audio as audioMap, fonts } from "./assetImports";
 
-import { useScreenTitle } from "./utils";
-import { PlaySettings, PlayViewScreen } from "./PlayViewScreen";
+import { useScreenOptions, useScreenTitle } from "./utils";
+import { PlaySettings, PlayViewScreen, SettingsModal } from "./PlayViewScreen";
 import { useFonts } from "expo-font";
 import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";
@@ -106,7 +106,12 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
         }`}
       />
     ));
-  return <ScrollView>{content}</ScrollView>;
+  return (
+    <ScrollView>
+      <SettingsModal {...{ navigation }} audio={null} />
+      {content}
+    </ScrollView>
+  );
 }
 
 const aliyahName = (num: AliyahNum) =>
@@ -122,7 +127,8 @@ export const dateFromStr = (str: string): HDate | null => {
 };
 
 export type Parshah = (typeof allParshiot)[number];
-export const isParshah = (x: string): x is Parshah => allParshiot.includes(x);
+export const isParshah = (x: string): x is Parshah =>
+  (allParshiot as readonly string[]).includes(x);
 const allParshiot = [
   "Bereshit",
   "Noach",
