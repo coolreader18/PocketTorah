@@ -53,7 +53,7 @@ function HomeScreen({ navigation }: ScreenProps<"Home">) {
           // const hdate = new HDate(28, 'Tamuz', 5795);
           // const hdate = new HDate(19, 'Tishrei', 5783);
           const saturday = hdate.onOrAfter(6);
-          navigate("AliyahSelectScreen", { readingId: dateToStr(saturday) });
+          navigate("AliyahSelectScreen", { readingId: dateToStr(saturday.greg()) });
         }}
         buttonTitle="This Week's Torah Readings"
       />
@@ -117,13 +117,16 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
 const aliyahName = (num: AliyahNum) =>
   num === "M" ? "Maftir Aliyah" : num == "H" ? "Haftarah" : `Aliyah ${num}`;
 
-export const dateToStr = (date: HDate) =>
-  `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` as const;
+export const dateToStr = (date: HDate | Date) =>
+  `${date.getFullYear()}-${
+    date.getMonth() + (HDate.isHDate(date) ? 0 : 1)
+  }-${date.getDate()}` as const;
 
 export const dateFromStr = (str: string): HDate | null => {
-  const m = /^(\d+)-(\d+)-(\d+)$/.exec(str);
-  if (!m) return null;
-  return m && new HDate(+m[3], +m[2], +m[1]);
+  const x = /^(\d+)-(\d+)-(\d+)$/.exec(str);
+  if (!x) return null;
+  const [y, m, d] = [+x[1], +x[2], +x[3]];
+  return y < 3000 ? new HDate(new Date(y, m - 1, d)) : new HDate(d, m, y);
 };
 
 export type Parshah = (typeof allParshiot)[number];

@@ -31,7 +31,7 @@ export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {
       }}
       onDayPress={({ year, month, day }) => {
         navigation.navigate("AliyahSelectScreen", {
-          readingId: dateToStr(new HDate(new Date(year, month - 1, day))),
+          readingId: dateToStr(new Date(year, month - 1, day)),
         });
       }}
     />
