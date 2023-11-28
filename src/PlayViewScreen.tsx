@@ -463,6 +463,7 @@ const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
   const fontMul = tikkun ? 30 : 36;
   return {
     deleteRegex,
+    tikkun,
     style: {
       fontFamily,
       fontSize: fontMul * textSizeMultiplier,
@@ -482,13 +483,18 @@ type VerseProps = {
 
 const fmtChV = ([cNum, vNum]: [number, number]) => `${cNum + 1}:${vNum + 1}`;
 
+const MAQAF = "־";
+
 const Verse = React.memo(function Verse(props: VerseProps) {
   const { verse, changeAudioTime, wordStyle, verseIndex, activeWordIndex } = props;
+  let prevMaqaf = false;
   const words = verse.words.map((word, wordIndex) => {
+    const postMaqaf = prevMaqaf;
+    prevMaqaf = word.endsWith(MAQAF);
     return (
       <Word
         key={wordIndex}
-        {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime }}
+        {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime, postMaqaf }}
         active={wordIndex === activeWordIndex}
         verseNum={wordIndex === 0 && verse.chapterVerse ? fmtChV(verse.chapterVerse) : undefined}
       />
@@ -517,6 +523,7 @@ type WordProps = WordIndexInfo & {
   word: string;
   verseNum?: string;
   active?: boolean;
+  postMaqaf?: boolean;
 };
 
 function Word({
@@ -527,11 +534,20 @@ function Word({
   verseIndex,
   wordIndex,
   changeAudioTime,
+  postMaqaf = false,
 }: WordProps) {
   const styles = useStyles();
 
   const wordElem = (
-    <Text style={[styles.word, wordStyle.style, active && styles.active]}>
+    <Text
+      style={[
+        styles.word,
+        !wordStyle.tikkun && word.endsWith(MAQAF) && styles.wordMaqaf,
+        !wordStyle.tikkun && postMaqaf && styles.wordPostMaqaf,
+        wordStyle.style,
+        active && styles.active,
+      ]}
+    >
       {word.replace(wordStyle.deleteRegex, "")}
     </Text>
   );
