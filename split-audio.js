@@ -138,13 +138,13 @@ for (const book_name of leyning.BOOK.slice(1)) {
   Object.assign(book_labels, require(`./old_data/torah/labels/${book_name}.json`));
 }
 const books = {};
-for (const fname of fs.readdirSync("./data/torah/json")) {
+for (const fname of fs.readdirSync("./old_data/torah/json")) {
   let book_name = path.basename(fname, ".json");
   book_name =
     { Samuel_1: "I Samuel", Samuel_2: "II Samuel", Kings_1: "I Kings", Kings_2: "II Kings" }[
       book_name
     ] ?? book_name;
-  books[book_name] = require(`./data/torah/json/${fname}`);
+  books[book_name] = require(`./old_data/torah/json/${fname}`);
 }
 
 const all = [];
