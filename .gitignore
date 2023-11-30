@@ -55,3 +55,4 @@ fastlane/screenshots
 /dist
 /data/audio/*/*.mp3
 /data/torah/labels/*.json
+/data/torah/json/*.json

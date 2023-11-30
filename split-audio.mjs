@@ -179,13 +179,13 @@ dup(book_labels.Tetzaveh[3], 167);
 book_labels.Shmini[6].splice(95, 1);
 
 const books = {};
-for (const fname of await fs.readdir("./data/torah/json")) {
+for (const fname of await fs.readdir("./old_data/torah/json")) {
   let book_name = path.basename(fname, ".json");
   book_name =
     { Samuel_1: "I Samuel", Samuel_2: "II Samuel", Kings_1: "I Kings", Kings_2: "II Kings" }[
       book_name
     ] ?? book_name;
-  ({ default: books[book_name] } = await import(`./data/torah/json/${fname}`, {
+  ({ default: books[book_name] } = await import(`./old_data/torah/json/${fname}`, {
     with: { type: "json" },
   }));
 }

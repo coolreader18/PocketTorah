@@ -159,7 +159,7 @@ const getVerseData = (verses: Verse[], book: Book, transBook?: TransBook): Verse
     const [cNum, vNum] = v.chapterVerse!;
     return {
       ...v,
-      words: book.Tanach.tanach.book.c![cNum]!.v[vNum].w as string[],
+      words: book[cNum][vNum],
       translation: transBook?.text[cNum][vNum],
     };
   });
