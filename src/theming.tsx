@@ -38,6 +38,9 @@ const makeStyles = (dark: boolean) => {
     word: { flex: 0, padding: 4 },
     wordMaqaf: { paddingLeft: 0 },
     wordPostMaqaf: { paddingRight: 0 },
+    sofAudioMismatch: {
+      color: dark ? "rgb(255, 111, 111)" : "rgb(221, 0, 0)",
+    },
     active: {
       color: dark ? "rgb(31, 31, 51)" : undefined,
       backgroundColor: dark ? "#ffff00" : "#ffff9d",

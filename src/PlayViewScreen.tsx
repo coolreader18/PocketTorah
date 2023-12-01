@@ -84,12 +84,17 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const key = params.aliyah + leyning.name.en;
 
-  const audioSource: AVPlaybackSource[] | null = useMemo(() => {
-    const arr = verseInfo.flat().map(({ book, chapterVerse, sof }) => {
+  const [audioSource, sofMismatch] = useMemo(() => {
+    const sofMismatch = Array<boolean>(verseInfo.flat().length).fill(false);
+    const arr = verseInfo.flat().map(({ book, chapterVerse, sof }, i) => {
       const src = audioMap[book][fmtChV(chapterVerse!)]?.();
-      return src && (sof ? src.sof ?? src.reg : src.reg ?? src.sof);
+      if (!src) return null;
+      const [pref, fallback] = sof ? [src.sof, src.reg] : [src.reg, src.sof];
+      if (pref != null) return pref;
+      sofMismatch[i] = true;
+      return fallback;
     });
-    return arr.some((v) => v == null) ? null : (arr as AVPlaybackSource[]);
+    return noneNull(arr) ? [arr, sofMismatch] : [null, null];
   }, [verseInfo]);
   const haveAudio = audioSource != null;
 
@@ -116,9 +121,12 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const transBook = translationOn ? transBook_ : undefined;
 
+  let v_i = 0;
   const verses =
     book && transBook !== null
-      ? verseInfo.flatMap((verse, i) => getVerseData(verse, book[i], transBook?.[i]))
+      ? verseInfo.flatMap((verses, i) =>
+          verses.map((verse) => getVerseData(verse, book[i], transBook?.[i], sofMismatch?.[v_i++])),
+        )
       : null;
 
   return (
@@ -130,6 +138,9 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   );
 }
 
+function noneNull<T>(arr: readonly T[]): arr is NonNullable<T>[] {
+  return arr.every((v) => v != null);
+}
 const range = (n: number): null[] => Array(n).fill(null);
 
 function slice<T>(arr: T[], start: number, end: number): T[] {
@@ -154,15 +165,20 @@ const extractVerses = (aliyah: Aliyah): Verse[] => {
   return ret;
 };
 
-const getVerseData = (verses: Verse[], book: Book, transBook?: TransBook): VerseData[] =>
-  verses.map((v) => {
-    const [cNum, vNum] = v.chapterVerse!;
-    return {
-      ...v,
-      words: book[cNum][vNum],
-      translation: transBook?.text[cNum][vNum],
-    };
-  });
+const getVerseData = (
+  verse: Verse,
+  book: Book,
+  transBook?: TransBook,
+  sofAudioMismatch = false,
+): VerseData => {
+  const [cNum, vNum] = verse.chapterVerse!;
+  return {
+    ...verse,
+    words: book[cNum][vNum],
+    translation: transBook?.text[cNum][vNum],
+    sofAudioMismatch,
+  };
+};
 
 type PlayViewProps = {
   verses: VerseData[] | null;
@@ -182,6 +198,7 @@ export type Verse = {
 export type VerseData = Verse & {
   words: string[];
   translation?: string;
+  sofAudioMismatch: boolean;
 };
 export function PlayView({
   verses,
@@ -497,6 +514,8 @@ const Verse = React.memo(function Verse(props: VerseProps) {
         {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime, postMaqaf }}
         active={wordIndex === activeWordIndex}
         verseNum={wordIndex === 0 && verse.chapterVerse ? fmtChV(verse.chapterVerse) : undefined}
+        // TODO: parse the trope somehow, maybe, to get it just on the mercha tipcha sof pasuk
+        sofAudioMismatch={verse.sofAudioMismatch && verse.words.length - wordIndex <= 3}
       />
     );
   });
@@ -524,6 +543,7 @@ type WordProps = WordIndexInfo & {
   verseNum?: string;
   active?: boolean;
   postMaqaf?: boolean;
+  sofAudioMismatch?: boolean;
 };
 
 function Word({
@@ -535,6 +555,7 @@ function Word({
   wordIndex,
   changeAudioTime,
   postMaqaf = false,
+  sofAudioMismatch = false,
 }: WordProps) {
   const styles = useStyles();
 
@@ -544,6 +565,7 @@ function Word({
         styles.word,
         !wordStyle.tikkun && word.endsWith(MAQAF) && styles.wordMaqaf,
         !wordStyle.tikkun && postMaqaf && styles.wordPostMaqaf,
+        sofAudioMismatch && styles.sofAudioMismatch,
         wordStyle.style,
         active && styles.active,
       ]}
