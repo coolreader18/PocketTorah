@@ -79,11 +79,11 @@ export const labels: Record<BookName, Importer<Record<string, number[]>>> = {
   Zechariah: () => import("../data/torah/labels/Zechariah.json"),
 };
 
-export const hebFont = "Taamey Frank Taamim Fix";
-export const tikkunFont = "Stam Ashkenaz CLM";
+export const hebFont = "Taamey_D";
+export const tikkunFont = "StamAshkenazCLM";
 export const fonts = {
-  [hebFont]: require("../fonts/TaameyFrank-taamim-fix.ttf"),
-  [tikkunFont]: require("../fonts/stamashkenazclm-webfont.ttf"),
+  [hebFont]: require("../fonts/Taamey_D.woff2"),
+  [tikkunFont]: require("../fonts/StamAshkenazCLM.woff2"),
 };
 
 export const tropeAudio: { [k in TropeType]: { [trope: string]: any } } = {
