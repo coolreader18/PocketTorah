@@ -214,7 +214,7 @@ type Params = {
   };
   TropePhrases: undefined;
   TropeSelectScreen: { tropeType: TropeType };
-  TropePlayScreen: { tropeType: TropeType; tropeIndex: number };
+  TropePlayScreen: { tropeType: TropeType; trope: string };
 };
 export type ReadingId = Parshah | `${number}-${number}-${number}`;
 const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
@@ -235,7 +235,7 @@ const linkingConfig: LinkingOptions<Params>["config"] = {
     PlayViewScreen: "/reading/:readingId/:aliyah",
     TropePhrases: "/tropes",
     TropeSelectScreen: "/tropes/:tropeType",
-    TropePlayScreen: "/tropes/:tropeType/:tropeIndex",
+    TropePlayScreen: "/tropes/:tropeType/:trope",
   },
 };
 const linking: LinkingOptions<Params> = {
