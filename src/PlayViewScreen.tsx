@@ -181,7 +181,7 @@ const getVerseData = (
 };
 
 type PlayViewProps = {
-  verses: VerseData[] | null;
+  verses: VerseInfo[] | null;
   audioSource: AVPlaybackSource[] | null;
   audioLabels: Promise<number[][]>;
   tikkun?: boolean;
@@ -195,10 +195,12 @@ export type Verse = {
   chapterVerse?: [number, number];
   sof: boolean;
 };
-export type VerseData = Verse & {
+export type VerseData = Verse & VerseInfo;
+export type VerseInfo = {
+  chapterVerse?: [number, number];
   words: string[];
   translation?: string;
-  sofAudioMismatch: boolean;
+  sofAudioMismatch?: boolean;
 };
 export function PlayView({
   verses,
@@ -440,7 +442,7 @@ type Book = ImportType<typeof bookMap>;
 type TransBook = ImportType<typeof transBookMap>;
 
 type VersesProps = {
-  verses: VerseData[];
+  verses: VerseInfo[];
   activeVerseIndex: number | null;
   activeWordIndex: number | null;
   forceLinebreakVerses: boolean;
@@ -491,7 +493,7 @@ const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
 type WordStyle = ReturnType<typeof getWordStyle>;
 
 type VerseProps = {
-  verse: VerseData;
+  verse: VerseInfo;
   changeAudioTime: ChangeAudioTime | undefined;
   wordStyle: WordStyle;
   verseIndex: number;
