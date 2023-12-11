@@ -85,10 +85,6 @@ module.exports = (env) => ({
       },
       babelLoaderConfiguration,
       ...imageLoaderConfiguration,
-      {
-        test: /\.txt$/,
-        type: "asset/source",
-      },
     ],
   },
 
@@ -121,6 +117,12 @@ module.exports = (env) => ({
     new GenerateSW({
       exclude: [/\.mp3$/, /\.map$/, /^manifest.*\.js$/],
       // include: [/data\/trope\/audio\/.*\.mp3$/],
+      runtimeCaching: [
+        {
+          urlPattern: /\.mp3$/,
+          handler: "CacheFirst",
+        },
+      ],
     }),
   ],
 });

@@ -58,7 +58,7 @@ export function useAudio(
     | {
         state: "resolved";
         currentTrack: number;
-        switchingTrack: boolean;
+        switchingTrack: boolean | null; // null == cancelled
         sounds: Audio.Sound[];
       }
     | {
@@ -89,6 +89,8 @@ export function useAudio(
             curAudio.switchingTrack = true;
             await prev.setStatusAsync({ positionMillis: 0, shouldPlay: false });
           } else if ("shouldPlay" in status && !status.shouldPlay) {
+            curAudio.switchingTrack = null;
+          } else {
             curAudio.switchingTrack = false;
           }
           await curAudio.sounds[curAudio.currentTrack].setStatusAsync(statusToSet);
@@ -121,8 +123,14 @@ export function useAudio(
           if (audio.current?.state !== "resolved" || audio.current.currentTrack !== i) return;
           setCurrentTrack(i);
           if (status.didJustFinish && i + 1 < audio.current.sounds.length) {
-            setStatusAsync({ nextTrack: true });
+            if (audio.current.switchingTrack == null) {
+              audio.current.currentTrack++;
+              audio.current.switchingTrack = false;
+            } else {
+              setStatusAsync({ nextTrack: true });
+            }
           } else {
+            status = { ...status };
             if (audio.current.switchingTrack) {
               if (status.isPlaying) audio.current.switchingTrack = false;
               else status.isPlaying = true;
