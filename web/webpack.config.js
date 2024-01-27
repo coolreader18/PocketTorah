@@ -18,6 +18,7 @@ const babelLoaderConfiguration = {
     path.resolve(appDirectory, "web"),
     path.resolve(appDirectory, "src"),
     path.resolve(appDirectory, "data/audio"),
+    path.resolve(appDirectory, "node_modules/expo-av"),
     path.resolve(appDirectory, "node_modules/react-native-uncompiled"),
     path.resolve(appDirectory, "node_modules/react-native-calendars"),
     path.resolve(appDirectory, "node_modules/react-native-swipe-gestures"),
@@ -27,7 +28,7 @@ const babelLoaderConfiguration = {
     options: {
       cacheDirectory: true,
       // The 'metro-react-native-babel-preset' preset is recommended to match React Native's packager
-      presets: ["module:metro-react-native-babel-preset"],
+      presets: ["module:@react-native/babel-preset"],
       // Re-write paths to import only the modules needed by the app
       plugins: ["react-native-web"],
     },
@@ -92,12 +93,13 @@ module.exports = (env) => ({
     // This will only alias the exact import "react-native"
     alias: {
       "react-native$": "react-native-web",
-      "react-native/Libraries/Image/AssetRegistry": "react-native-web/dist/modules/AssetRegistry",
+      "@react-native/assets-registry/registry": "react-native-web/dist/modules/AssetRegistry",
     },
     // If you're working on a multi-platform React Native app, web-specific
     // module implementations should be written in files using the extension
     // `.web.js`.
     extensions: [".web.js", ".js", ".web.ts", ".ts", ".web.tsx", ".tsx"],
+    fallback: { crypto: false },
   },
   plugins: [
     new webpack.EnvironmentPlugin({ REACT_NAV_LOGGING: "" }),

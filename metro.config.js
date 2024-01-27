@@ -18,7 +18,7 @@ const config = {
     }),
   },
   resolver: {
-    assetExts: [...defaultConfig.resolver.assetExts, 'xml'],
+    assetExts: [...defaultConfig.resolver.assetExts, 'xml', 'woff2'],
   }
 };
 
