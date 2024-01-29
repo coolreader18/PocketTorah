@@ -8,7 +8,7 @@
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint .",
-    "web-dev": "webpack b --config ./web/webpack.config.js --mode development -w",
+    "web-dev": "webpack serve --config ./web/webpack.config.js --mode development",
     "web-dist": "webpack b --config ./web/webpack.config.js --mode production",
     "prepare": "node data/torah/json/process_mam.js"
   },
@@ -57,8 +57,9 @@
     "jest": "^29.2.1",
     "react-native-web": "^0.19.10",
     "react-test-renderer": "18.2.0",
-    "webpack": "^5.88.2",
+    "webpack": "^5.90.0",
     "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1",
     "webpack-webmanifest-loader": "^2.0.2",
     "workbox-webpack-plugin": "^7.0.0"
   },
