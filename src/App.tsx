@@ -36,6 +36,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { CustomButton, Text, useNavigationTheme } from "./theming";
 import { AboutScreen } from "./AboutScreen";
 import { fixReadingId, getLeyning } from "./leyning";
+import { boolQuery } from "./utils";
 
 function HomeScreen({ navigation }: ScreenProps<"Home">) {
   const { navigate } = navigation;
@@ -82,7 +83,8 @@ function TorahReadingsScreen({ navigation }: ScreenProps<"TorahReadingsScreen">)
 
 function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScreen">) {
   const readingId = fixReadingId(route.params.readingId);
-  const [{ tri, il }] = useSettings();
+  const [{ tri: settingsTri, il }] = useSettings();
+  const tri = boolQuery(route.params.tri) ?? settingsTri;
 
   const reading = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
   if (!reading) throw new Error(`bad readingid ${readingId}`);
@@ -98,7 +100,13 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
     .map((num) => (
       <CustomButton
         key={num}
-        onPress={() => navigation.navigate("PlayViewScreen", { readingId, aliyah: num })}
+        onPress={() =>
+          navigation.navigate("PlayViewScreen", {
+            readingId,
+            aliyah: num,
+            tri: route.params.tri === null ? "1" : route.params.tri,
+          })
+        }
         buttonTitle={`${namePrefix}${aliyahName(num)}: ${
           num === "H"
             ? makeSummaryFromParts(reading.haftara)
@@ -207,10 +215,12 @@ type Params = {
   Calendar: undefined;
   AliyahSelectScreen: {
     readingId: ReadingId;
+    tri?: "1" | "0" | null;
   };
   PlayViewScreen: {
     readingId: ReadingId;
     aliyah: AliyahNum;
+    tri?: "1" | "0" | null;
   };
   TropePhrases: undefined;
   TropeSelectScreen: { tropeType: TropeType };
