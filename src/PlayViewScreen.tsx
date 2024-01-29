@@ -21,7 +21,14 @@ import {
   hebFont,
 } from "./assetImports";
 import binarySearch from "binary-search";
-import { Maybe, ensureArray, usePromise, useScreenOptions, useScreenTitle } from "./utils";
+import {
+  Maybe,
+  boolQuery,
+  ensureArray,
+  usePromise,
+  useScreenOptions,
+  useScreenTitle,
+} from "./utils";
 import { Audio, useAudio } from "./useAudio";
 import { AliyahNum, ScreenProps, Parshah, NavigationProp } from "./App";
 import { getLeyning, fixReadingId, Reading } from "./leyning";
@@ -63,7 +70,8 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   );
 
   const readingId = fixReadingId(params.readingId);
-  const [{ tri, il }] = useSettings();
+  const [{ tri: settingsTri, il }] = useSettings();
+  const tri = boolQuery(route.params.tri) ?? settingsTri;
   const leyning = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
 
   useScreenTitle(navigation, leyning?.name.en ?? "404");

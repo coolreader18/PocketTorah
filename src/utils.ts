@@ -59,3 +59,10 @@ export function useScreenTitle(
 }
 
 export const ensureArray = <T>(x: T | T[]): T[] => (Array.isArray(x) ? x : [x]);
+export const boolQuery = (x: "1" | "0" | null | undefined): boolean | null =>
+  x === undefined
+    ? null
+    : // null means a query without a value, e.g. /foo/bar?tri
+    x === null || x === "1"
+    ? true
+    : false;
