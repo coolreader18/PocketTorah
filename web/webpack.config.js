@@ -127,4 +127,19 @@ module.exports = (env) => ({
       ],
     }),
   ],
+
+  devServer: {
+    port: 8080,
+    client: {
+      overlay: {
+        errors: true,
+        runtimeErrors: true,
+        warnings: false,
+      },
+    },
+    onListening: (devServer) => {
+      const port = devServer.server.address().port;
+      console.log(`PocketTorah at http://localhost:${port}${publicPath}`);
+    },
+  },
 });
