@@ -33,7 +33,7 @@ import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";
 import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { CustomButton, Text, useNavigationTheme } from "./theming";
+import { CustomButton, HeaderContainer, Text, useNavigationTheme } from "./theming";
 import { AboutScreen } from "./AboutScreen";
 import { fixReadingId, getLeyning } from "./leyning";
 import { boolQuery } from "./utils";
@@ -91,6 +91,16 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
 
   useScreenTitle(navigation, reading.name.en ?? "404");
 
+  const [modalVisible, setModalVisible] = useState(false);
+
+  useScreenOptions(navigation, {
+    headerRight: () => (
+      <HeaderContainer>
+        <Button title="Settings" onPress={() => setModalVisible(true)} />
+      </HeaderContainer>
+    ),
+  });
+
   const kriyah = reading.aliyot;
   const namePrefix = reading.kind === "weekday" ? "Weekday " : "";
   const special = !reading.parsha;
@@ -116,7 +126,7 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
     ));
   return (
     <ScrollView>
-      <SettingsModal {...{ navigation }} audio={null} />
+      <SettingsModal {...{ modalVisible, setModalVisible }} audio={null} />
       {content}
     </ScrollView>
   );
