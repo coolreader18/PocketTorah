@@ -32,7 +32,15 @@ import {
 import { Audio, useAudio } from "./useAudio";
 import { AliyahNum, ScreenProps, Parshah, NavigationProp } from "./App";
 import { getLeyning, fixReadingId, Reading } from "./leyning";
-import { Footer, FooterButton, ModalSection, Text, useStyles, wrapComponent } from "./theming";
+import {
+  Footer,
+  FooterButton,
+  HeaderContainer,
+  ModalSection,
+  Text,
+  useStyles,
+  wrapComponent,
+} from "./theming";
 import { CustomButton } from "./theming";
 import { useFonts } from "expo-font";
 import { UpdateSettings, useSettings } from "./settings";
@@ -141,6 +149,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
     <PlayView
       audioLabels={labelsPromise}
       tikkun={tikkunOn}
+      tropes={params.aliyah === "H" ? "haftarah" : "torah"}
       {...{ verses, audioSource, buttons, navigation }}
     />
   );
@@ -197,6 +206,7 @@ type PlayViewProps = {
   navigation: NavigationProp;
   forceLinebreakVerses?: boolean;
   singleVerseAudio?: boolean;
+  tropes?: "torah" | "haftarah";
 };
 export type Verse = {
   book: BookName;
@@ -219,6 +229,7 @@ export function PlayView({
   navigation,
   forceLinebreakVerses = false,
   singleVerseAudio = false,
+  tropes,
 }: PlayViewProps) {
   const [{ textSize: textSizeMultiplier, audioSpeed }] = useSettings();
 
@@ -248,6 +259,26 @@ export function PlayView({
           }
         : undefined,
     [audioLabels, verses, audio?.setCurrentTime],
+  );
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  useScreenOptions(
+    navigation,
+    {
+      headerRight: () => (
+        <HeaderContainer>
+          {tropes && (
+            <Button
+              title="trope"
+              onPress={() => navigation.navigate("TropeSelectScreen", { tropeType: tropes })}
+            />
+          )}
+          <Button title="Settings" onPress={() => setModalVisible(true)} />
+        </HeaderContainer>
+      ),
+    },
+    [tropes],
   );
 
   if (!fontsLoaded || !verses) {
@@ -282,7 +313,7 @@ export function PlayView({
 
     return (
       <View style={{ height: "100%" }}>
-        <SettingsModal {...{ navigation, audio }} />
+        <SettingsModal {...{ audio, modalVisible, setModalVisible }} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 5 }}>
           <Verses
             {...{
@@ -320,33 +351,23 @@ export function PlayView({
 }
 
 export const SettingsModal = ({
-  navigation,
   audio,
+  modalVisible,
+  setModalVisible,
 }: {
-  navigation: NavigationProp;
   audio: Audio | null;
-}) => {
-  const [modalVisible, setModalVisible] = useState(false);
-
-  useScreenOptions(navigation, {
-    headerRight: () => (
-      <View style={{ marginRight: 5 }}>
-        <Button title="Settings" onPress={() => setModalVisible(true)} />
-      </View>
-    ),
-  });
-
-  return (
-    <Modal
-      animationType="slide"
-      transparent={false}
-      visible={modalVisible}
-      onRequestClose={() => console.log("Modal has been closed.")}
-    >
-      <PlaySettings closeSettings={() => setModalVisible(false)} setAudioSpeed={audio?.setSpeed} />
-    </Modal>
-  );
-};
+  modalVisible: boolean;
+  setModalVisible: (visible: boolean) => void;
+}) => (
+  <Modal
+    animationType="slide"
+    transparent={false}
+    visible={modalVisible}
+    onRequestClose={() => console.log("Modal has been closed.")}
+  >
+    <PlaySettings closeSettings={() => setModalVisible(false)} setAudioSpeed={audio?.setSpeed} />
+  </Modal>
+);
 
 type PlaySettingsProps = {
   closeSettings: () => void;

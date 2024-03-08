@@ -20,6 +20,7 @@ export const wrapComponent =
 export const Text = wrapComponent(RN.Text, "text");
 export const Footer = wrapComponent(RN.View, "footer");
 export const ModalSection = wrapComponent(RN.View, "modalSection");
+export const HeaderContainer = wrapComponent(RN.View, "headerContainer");
 
 const makeStyles = (dark: boolean) => {
   const navTheme = dark ? DarkTheme : DefaultTheme;
@@ -111,6 +112,12 @@ const makeStyles = (dark: boolean) => {
     settingsRow: {
       flexDirection: "row",
       justifyContent: "space-between",
+    },
+    headerContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 11,
+      marginHorizontal: 11,
     },
   });
 };
