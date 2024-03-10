@@ -29,7 +29,7 @@ const makeStyles = (dark: boolean) => {
       color: navTheme.colors.text,
     },
     buttonContainer: {
-      margin: 10,
+      margin: 5,
       padding: 10,
       backgroundColor: dark ? "#35393B" : "#ccc",
     },
@@ -136,7 +136,8 @@ type CustomButtonProps = {
   onPress?: () => void;
   style?: RN.TouchableOpacityProps["style"];
   textStyle?: RN.TextStyle;
-  buttonTitle: string | React.ReactNode;
+  buttonTitle?: React.ReactNode;
+  children?: React.ReactNode;
   disabled?: boolean;
 };
 
@@ -146,15 +147,13 @@ export function CustomButton({
   buttonTitle,
   disabled,
   textStyle,
+  children,
 }: CustomButtonProps) {
   const styles = useStyles();
   return (
     <TouchableOpacity {...{ onPress, style, disabled }} style={[styles.buttonContainer, style]}>
-      {typeof buttonTitle === "string" ? (
-        <Text style={[styles.button, textStyle]}>{buttonTitle}</Text>
-      ) : (
-        buttonTitle
-      )}
+      {buttonTitle && <Text style={[styles.button, textStyle]}>{buttonTitle}</Text>}
+      {children}
     </TouchableOpacity>
   );
 }
