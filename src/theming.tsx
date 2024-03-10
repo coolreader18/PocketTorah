@@ -29,10 +29,12 @@ const makeStyles = (dark: boolean) => {
     text: {
       color: navTheme.colors.text,
     },
-    button: {
+    buttonContainer: {
       margin: 10,
       padding: 10,
       backgroundColor: dark ? "#35393B" : "#ccc",
+    },
+    button: {
       textAlign: "center",
     },
 
@@ -116,6 +118,7 @@ const makeStyles = (dark: boolean) => {
     headerContainer: {
       flexDirection: "row",
       justifyContent: "space-between",
+      alignItems: "center",
       gap: 11,
       marginHorizontal: 11,
     },
@@ -132,16 +135,27 @@ export const useStyles = () => (useDarkMode() ? darkStyles : lightStyles);
 export const useNavigationTheme = () => (useDarkMode() ? DarkTheme : DefaultTheme);
 type CustomButtonProps = {
   onPress?: () => void;
-  style?: object;
-  buttonTitle: string;
+  style?: RN.TouchableOpacityProps["style"];
+  textStyle?: RN.TextStyle;
+  buttonTitle: string | React.ReactNode;
   disabled?: boolean;
 };
 
-export function CustomButton({ onPress, style, buttonTitle, disabled }: CustomButtonProps) {
+export function CustomButton({
+  onPress,
+  style,
+  buttonTitle,
+  disabled,
+  textStyle,
+}: CustomButtonProps) {
   const styles = useStyles();
   return (
-    <TouchableOpacity {...{ onPress, style, disabled }}>
-      <Text style={styles.button}>{buttonTitle}</Text>
+    <TouchableOpacity {...{ onPress, style, disabled }} style={[styles.buttonContainer, style]}>
+      {typeof buttonTitle === "string" ? (
+        <Text style={[styles.button, textStyle]}>{buttonTitle}</Text>
+      ) : (
+        buttonTitle
+      )}
     </TouchableOpacity>
   );
 }

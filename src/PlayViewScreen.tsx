@@ -30,6 +30,7 @@ import { useSettings } from "./settings";
 import { AVPlaybackSource } from "expo-av";
 import { numverses } from "./numVerses";
 import { SettingsModal } from "./SettingsScreen";
+import tropeIcon from "./trope-icon.svg";
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];
@@ -253,16 +254,20 @@ export function PlayView({
       headerRight: () => (
         <HeaderContainer>
           {tropes && (
-            <Button
-              title="trope"
-              onPress={() => navigation.navigate("TropeSelectScreen", { tropeType: tropes })}
+            <CustomButton
+              buttonTitle={<Image source={tropeIcon} />}
+              style={{ borderRadius: 100, margin: 0, padding: 8 }}
+              onPress={() => {
+                audio?.pause();
+                navigation.navigate("TropeSelectScreen", { tropeType: tropes });
+              }}
             />
           )}
           <Button title="Settings" onPress={() => setModalVisible(true)} />
         </HeaderContainer>
       ),
     },
-    [tropes],
+    [tropes, setModalVisible, audio?.pause],
   );
 
   if (!fontsLoaded || !verses) {
