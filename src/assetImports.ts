@@ -1,5 +1,5 @@
-import type { TropeType } from "./trope";
 import type { BookName } from "./PlayViewScreen";
+import type { TropeType } from "./trope";
 
 export { audio } from "../data/audio/audioImports";
 

@@ -7,13 +7,13 @@
  */
 
 import React, { createContext, useContext, useMemo, useState } from "react";
-import { Button, ScrollView, StyleProp, View, ViewStyle, useColorScheme } from "react-native";
+import { Button, ScrollView, StyleProp, ViewStyle, useColorScheme } from "react-native";
 
 import {
+  LinkingOptions,
   NavigationContainer,
   getPathFromState,
   getStateFromPath,
-  LinkingOptions,
 } from "@react-navigation/native";
 import {
   StackNavigationProp,
@@ -21,23 +21,22 @@ import {
   createStackNavigator,
 } from "@react-navigation/stack";
 
-import { HDate, parshiot as hebcalParshiot } from "@hebcal/core";
+import { HDate } from "@hebcal/core";
 import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 
-import { audio as audioMap, fonts } from "./assetImports";
+import { fonts } from "./assetImports";
 
-import { useScreenOptions, useScreenTitle } from "./utils";
+import { useFonts } from "expo-font";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { AboutScreen } from "./AboutScreen";
+import { CalendarScreen } from "./CalendarScreen";
 import { PlayViewScreen } from "./PlayViewScreen";
 import { PlaySettings, SettingsModal } from "./SettingsScreen";
-import { useFonts } from "expo-font";
-import { SettingsProvider, useSettings } from "./settings";
-import { CalendarScreen } from "./CalendarScreen";
-import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
-import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { CustomButton, HeaderContainer, Text, useNavigationTheme } from "./theming";
-import { AboutScreen } from "./AboutScreen";
 import { fixReadingId, getLeyning } from "./leyning";
-import { boolQuery } from "./utils";
+import { SettingsProvider, useSettings } from "./settings";
+import { CustomButton, HeaderContainer, useNavigationTheme } from "./theming";
+import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
+import { boolQuery, useScreenOptions, useScreenTitle } from "./utils";
 
 function HomeScreen({ navigation }: ScreenProps<"Home">) {
   const { navigate } = navigation;

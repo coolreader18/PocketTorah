@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export interface Settings {
   /** A multiplier for the size of the hebrew text */

@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { View, TouchableOpacity, Modal, Switch } from "react-native";
 import Slider from "@react-native-community/slider";
-import { Audio } from "./useAudio";
-import { ModalSection, Text, useStyles, wrapComponent } from "./theming";
-import { CustomButton } from "./theming";
-import { UpdateSettings, useSettings } from "./settings";
+import React, { useEffect, useState } from "react";
+import { Modal, Switch, TouchableOpacity, View } from "react-native";
 import { Word, getWordStyle } from "./PlayViewScreen";
+import { UpdateSettings, useSettings } from "./settings";
+import { CustomButton, ModalSection, Text, useStyles, wrapComponent } from "./theming";
+import { Audio } from "./useAudio";
 
 export const SettingsModal = ({
   audio,

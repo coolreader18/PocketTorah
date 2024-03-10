@@ -2,13 +2,12 @@ import { HDate, ParshaEvent } from "@hebcal/core";
 import {
   Aliyah,
   AliyotMap,
+  Leyning,
   getLeyningOnDate as getFullLeyningOnDate,
   getLeyningForParsha,
-  Leyning,
 } from "@hebcal/leyning";
 import { Triennial, getTriennial, getTriennialForParshaHaShavua } from "@hebcal/triennial";
-import { isParshah, ReadingId, dateFromStr } from "./App";
-import { audio as audioMap } from "./assetImports";
+import { ReadingId, dateFromStr, isParshah } from "./App";
 import { ensureArray } from "./utils";
 
 export type Reading = {
