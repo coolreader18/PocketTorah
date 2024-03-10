@@ -27,7 +27,8 @@ import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 import { audio as audioMap, fonts } from "./assetImports";
 
 import { useScreenOptions, useScreenTitle } from "./utils";
-import { PlaySettings, PlayViewScreen, SettingsModal } from "./PlayViewScreen";
+import { PlayViewScreen } from "./PlayViewScreen";
+import { PlaySettings, SettingsModal } from "./SettingsScreen";
 import { useFonts } from "expo-font";
 import { SettingsProvider, useSettings } from "./settings";
 import { CalendarScreen } from "./CalendarScreen";

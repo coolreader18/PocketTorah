@@ -1,14 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  View,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Button,
-  Modal,
-  Switch,
-} from "react-native";
-import Slider from "@react-native-community/slider";
+import React, { useMemo, useState } from "react";
+import { View, TouchableOpacity, ScrollView, ActivityIndicator, Button, Image } from "react-native";
 import maftirOffset from "../data/maftirOffset.json";
 import { lookupParsha, BOOK, Aliyah } from "@hebcal/leyning";
 import {
@@ -29,23 +20,16 @@ import {
   useScreenOptions,
   useScreenTitle,
 } from "./utils";
-import { Audio, useAudio } from "./useAudio";
+import { useAudio } from "./useAudio";
 import { AliyahNum, ScreenProps, Parshah, NavigationProp } from "./App";
 import { getLeyning, fixReadingId, Reading } from "./leyning";
-import {
-  Footer,
-  FooterButton,
-  HeaderContainer,
-  ModalSection,
-  Text,
-  useStyles,
-  wrapComponent,
-} from "./theming";
+import { Footer, FooterButton, HeaderContainer, Text, useStyles } from "./theming";
 import { CustomButton } from "./theming";
 import { useFonts } from "expo-font";
-import { UpdateSettings, useSettings } from "./settings";
+import { useSettings } from "./settings";
 import { AVPlaybackSource } from "expo-av";
 import { numverses } from "./numVerses";
+import { SettingsModal } from "./SettingsScreen";
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];
@@ -350,118 +334,6 @@ export function PlayView({
   }
 }
 
-export const SettingsModal = ({
-  audio,
-  modalVisible,
-  setModalVisible,
-}: {
-  audio: Audio | null;
-  modalVisible: boolean;
-  setModalVisible: (visible: boolean) => void;
-}) => (
-  <Modal
-    animationType="slide"
-    transparent={false}
-    visible={modalVisible}
-    onRequestClose={() => console.log("Modal has been closed.")}
-  >
-    <PlaySettings closeSettings={() => setModalVisible(false)} setAudioSpeed={audio?.setSpeed} />
-  </Modal>
-);
-
-type PlaySettingsProps = {
-  closeSettings: () => void;
-  setAudioSpeed?: (speed: number) => void;
-};
-
-export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps) {
-  const [settings, updateSettings] = useSettings();
-  const [tempSettings, setTempSettings] = useState(settings);
-  const updateTempSettings: UpdateSettings = (upd) =>
-    setTempSettings((prev) => ({ ...prev, ...upd }));
-
-  useEffect(() => {
-    setAudioSpeed?.(tempSettings.audioSpeed);
-  }, [setAudioSpeed, tempSettings.audioSpeed]);
-
-  const styles = useStyles();
-
-  const breishit = "בְּרֵאשִׁ֖ית";
-  return (
-    <View style={[styles.modalContainer, { height: "100%" }, styles.baseBackground]}>
-      <Text style={styles.modalHeader}>Settings</Text>
-      <ModalSection>
-        <Text>Font Size:</Text>
-        <Slider
-          minimumValue={0.5}
-          maximumValue={2}
-          value={tempSettings.textSize}
-          onValueChange={(textSize) => updateTempSettings({ textSize })}
-        />
-        <Word word={breishit} wordStyle={getWordStyle(false, tempSettings.textSize)} />
-        <Word word={breishit} wordStyle={getWordStyle(true, tempSettings.textSize)} />
-      </ModalSection>
-      {setAudioSpeed && (
-        <ModalSection>
-          <Text>Set Audio Speed:</Text>
-          <Slider
-            minimumValue={0.5}
-            maximumValue={2}
-            value={tempSettings.audioSpeed}
-            onSlidingComplete={(audioSpeed) => updateTempSettings({ audioSpeed })}
-          />
-        </ModalSection>
-      )}
-
-      <ModalSection>
-        <SettingsRow>
-          <Text>Triennial?</Text>
-          <Switch value={tempSettings.tri} onValueChange={(tri) => updateTempSettings({ tri })} />
-        </SettingsRow>
-        <SettingsRow>
-          <Text>Israeli Holiday Scheme?</Text>
-          <Switch value={tempSettings.il} onValueChange={(il) => updateTempSettings({ il })} />
-        </SettingsRow>
-      </ModalSection>
-
-      <View style={styles.modalFooter}>
-        <CustomButton
-          onPress={() => {
-            updateSettings(tempSettings);
-            closeSettings();
-          }}
-          buttonTitle="Save Settings"
-        />
-        <CustomButton
-          onPress={() => {
-            closeSettings();
-            setAudioSpeed?.(settings.audioSpeed);
-          }}
-          buttonTitle="Cancel"
-        />
-      </View>
-
-      <ModalSection>
-        <SettingsRow>
-          <Text>Color Scheme</Text>
-          <View style={{ flexDirection: "row" }}>
-            {(["auto", "light", "dark"] as const).map((colorTheme) => (
-              <TouchableOpacity key={colorTheme} onPress={() => updateSettings({ colorTheme })}>
-                <Text style={[{ padding: 4 }, settings.colorTheme === colorTheme && styles.active]}>
-                  {titlecase(colorTheme)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </SettingsRow>
-      </ModalSection>
-    </View>
-  );
-}
-
-const SettingsRow = wrapComponent(View, "settingsRow");
-const titlecase = (s: string) => s.slice(0, 1).toUpperCase() + s.slice(1);
-
 function parseChV(s: string): [number, number] {
   const [ch, v] = s.split(":");
   return [parseInt(ch) - 1, parseInt(v) - 1];
@@ -505,7 +377,7 @@ const Verses = React.memo(function Verses({
   return forceLinebreakVerses || anyTrans ? <View>{verseText}</View> : <Text>{verseText}</Text>;
 });
 
-const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
+export const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
   const deleteRegex = tikkun ? /[\/\u0591-\u05C7]/g : /\//g;
   const fontFamily = tikkun ? tikkunFont : hebFont;
   const fontMul = tikkun ? 30 : 36;
@@ -577,7 +449,7 @@ type WordProps = WordIndexInfo & {
   sofAudioMismatch?: boolean;
 };
 
-function Word({
+export function Word({
   word,
   wordStyle,
   verseNum,
