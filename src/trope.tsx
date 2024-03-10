@@ -1,9 +1,9 @@
+import { useMemo } from "react";
 import { ScrollView, View } from "react-native";
 import { ScreenProps } from "./App";
-import { CustomButton } from "./theming";
-import { useMemo } from "react";
 import { PlayView } from "./PlayViewScreen";
 import { tropeAudio, tropeLabels, tropeText } from "./assetImports";
+import { CustomButton } from "./theming";
 import { useScreenTitle } from "./utils";
 
 const tropeTypes = ["torah", "haftarah", "esther", "eicha", "3megillot", "hhd"] as const;

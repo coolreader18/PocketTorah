@@ -1,10 +1,9 @@
 import { DarkTheme, DefaultTheme } from "@react-navigation/native";
+import React, { JSXElementConstructor } from "react";
 import * as RN from "react-native";
-import { platformSelect } from "./utils";
-import { useDarkMode } from "./App";
-import { JSXElementConstructor } from "react";
-import React from "react";
 import { TouchableOpacity } from "react-native";
+import { useDarkMode } from "./App";
+import { platformSelect } from "./utils";
 
 export const wrapComponent =
   <P extends { style?: RN.StyleProp<any> }>(

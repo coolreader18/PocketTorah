@@ -1,17 +1,26 @@
+import { Aliyah } from "@hebcal/leyning";
+import binarySearch from "binary-search";
+import { AVPlaybackSource } from "expo-av";
+import { useFonts } from "expo-font";
 import React, { useMemo, useState } from "react";
-import { View, TouchableOpacity, ScrollView, ActivityIndicator, Button, Image } from "react-native";
-import maftirOffset from "../data/maftirOffset.json";
-import { lookupParsha, BOOK, Aliyah } from "@hebcal/leyning";
+import { ActivityIndicator, Button, Image, ScrollView, TouchableOpacity, View } from "react-native";
+import { AliyahNum, NavigationProp, ScreenProps } from "./App";
+import { SettingsModal } from "./SettingsScreen";
 import {
   audio as audioMap,
-  labels as labelsMap,
   bookMap,
-  transBookMap,
   fonts,
-  tikkunFont,
   hebFont,
+  labels as labelsMap,
+  tikkunFont,
+  transBookMap,
 } from "./assetImports";
-import binarySearch from "binary-search";
+import { Reading, fixReadingId, getLeyning } from "./leyning";
+import { numverses } from "./numVerses";
+import { useSettings } from "./settings";
+import { CustomButton, Footer, FooterButton, HeaderContainer, Text, useStyles } from "./theming";
+import tropeIcon from "./trope-icon.svg";
+import { useAudio } from "./useAudio";
 import {
   Maybe,
   boolQuery,
@@ -20,17 +29,6 @@ import {
   useScreenOptions,
   useScreenTitle,
 } from "./utils";
-import { useAudio } from "./useAudio";
-import { AliyahNum, ScreenProps, Parshah, NavigationProp } from "./App";
-import { getLeyning, fixReadingId, Reading } from "./leyning";
-import { Footer, FooterButton, HeaderContainer, Text, useStyles } from "./theming";
-import { CustomButton } from "./theming";
-import { useFonts } from "expo-font";
-import { useSettings } from "./settings";
-import { AVPlaybackSource } from "expo-av";
-import { numverses } from "./numVerses";
-import { SettingsModal } from "./SettingsScreen";
-import tropeIcon from "./trope-icon.svg";
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];

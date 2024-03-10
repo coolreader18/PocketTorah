@@ -1,12 +1,12 @@
-import React, { useState } from "react";
 import { HDate } from "@hebcal/core";
-import { getLeyningOnDate, Reading } from "./leyning";
-import { Calendar, CalendarProvider } from "react-native-calendars";
-import { MarkedDates } from "react-native-calendars/src/types";
+import React, { useState } from "react";
+import { Calendar } from "react-native-calendars";
 import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
 import { toMarkingFormat } from "react-native-calendars/src/interface";
+import { MarkedDates } from "react-native-calendars/src/types";
+import { dateToStr, ScreenProps } from "./App";
+import { getLeyningOnDate, Reading } from "./leyning";
 import { useSettings } from "./settings";
-import { ScreenProps, dateToStr } from "./App";
 import { useCalendarTheme } from "./theming";
 
 export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {

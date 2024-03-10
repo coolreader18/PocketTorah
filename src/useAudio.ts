@@ -1,12 +1,6 @@
+import { AVPlaybackSource, AVPlaybackStatusSuccess, AVPlaybackStatusToSet, Audio } from "expo-av";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Audio,
-  AVPlaybackStatusSuccess,
-  AVPlaybackStatusToSet,
-  AVPlaybackStatus,
-  AVPlaybackSource,
-} from "expo-av";
-import { exteriorPromise, ExteriorPromise } from "./utils";
+import { ExteriorPromise, exteriorPromise } from "./utils";
 
 export interface Audio {
   loaded: boolean;
