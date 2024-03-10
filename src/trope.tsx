@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { ScrollView, View } from "react-native";
 import { ScreenProps } from "./App";
 import { PlayView } from "./PlayViewScreen";
-import { tropeAudio, tropeLabels, tropeText } from "./assetImports";
-import { CustomButton } from "./theming";
-import { useScreenTitle } from "./utils";
+import { hebFont, tropeAudio, tropeLabels, tropeText } from "./assetImports";
+import { CustomButton, Text } from "./theming";
+import { ensureArray, useScreenTitle } from "./utils";
 
 const tropeTypes = ["torah", "haftarah", "esther", "eicha", "3megillot", "hhd"] as const;
 export type TropeType = (typeof tropeTypes)[number];
@@ -26,6 +26,28 @@ export const TropePhrases = ({ navigation }: ScreenProps<"TropePhrases">) => {
   );
 };
 
+const tropeChars: { [trope: string]: string | string[] } = {
+  etnachta: "֑",
+  sof_pasuk: "׃",
+  zakef_katan: "֔",
+  katon: "֔",
+  revii: "֗",
+  kadma_vazlan: ["֨", "֝"],
+  geresh_gershayim: ["֜", "֞"],
+  geresh: "֜",
+  gershayim: "֞",
+  tevir: "֛",
+  telisha: ["֩", "֠"],
+  pazer: "֡",
+  yetiv_katom: ["֚", "֔"],
+  zakef_gadol: "֕",
+  zarka: "֮",
+  mercha_kefulah: "֦",
+  karnei_parah: "֟",
+  yerech_ben_yomo: "֪",
+  pashta_katon: ["֙", "֔"],
+};
+
 export const TropeSelectScreen = ({ route, navigation }: ScreenProps<"TropeSelectScreen">) => {
   const { tropeType } = route.params;
   const { title, tropes } = tropeText[tropeType]();
@@ -36,7 +58,21 @@ export const TropeSelectScreen = ({ route, navigation }: ScreenProps<"TropeSelec
         <CustomButton
           key={trope}
           onPress={() => navigation.navigate("TropePlayScreen", { tropeType, trope: trope })}
-          buttonTitle={name_he}
+          textStyle={{ fontSize: 18 }}
+          buttonTitle={
+            <>
+              {name_he}
+              {trope in tropeChars && (
+                <Text style={{ fontFamily: "Taamey_D", fontSize: 25 }}>
+                  {" ( " +
+                    ensureArray(tropeChars[trope])
+                      .map((x) => "ב" + x)
+                      .join(" ") +
+                    " )"}
+                </Text>
+              )}
+            </>
+          }
         />
       ))}
     </ScrollView>

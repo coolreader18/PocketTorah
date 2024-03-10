@@ -253,13 +253,14 @@ export function PlayView({
         <HeaderContainer>
           {tropes && (
             <CustomButton
-              buttonTitle={<Image source={tropeIcon} />}
               style={{ borderRadius: 100, margin: 0, padding: 8 }}
               onPress={() => {
                 audio?.pause();
                 navigation.navigate("TropeSelectScreen", { tropeType: tropes });
               }}
-            />
+            >
+              <Image source={tropeIcon} />
+            </CustomButton>
           )}
           <Button title="Settings" onPress={() => setModalVisible(true)} />
         </HeaderContainer>
