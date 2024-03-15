@@ -1,25 +1,34 @@
 import { Aliyah } from "@hebcal/leyning";
 import binarySearch from "binary-search";
 import { AVPlaybackSource } from "expo-av";
-import { useFonts } from "expo-font";
 import React, { useMemo, useState } from "react";
+import useFonts from "../fonts";
 import { ActivityIndicator, Button, Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { AliyahNum, NavigationProp, ScreenProps } from "./App";
 import { SettingsModal } from "./SettingsScreen";
 import {
+  Book,
+  TransBook,
   audio as audioMap,
-  bookMap,
-  fonts,
+  getBook,
+  getLabels,
+  getTransBook,
   hebFont,
-  labels as labelsMap,
   tikkunFont,
-  transBookMap,
 } from "./assetImports";
 import { Reading, fixReadingId, getLeyning } from "./leyning";
 import { numverses } from "./numVerses";
 import { useSettings } from "./settings";
-import { CustomButton, Footer, FooterButton, HeaderContainer, Text, useStyles } from "./theming";
-import tropeIcon from "./trope-icon.svg";
+import {
+  CustomButton,
+  Footer,
+  FooterButton,
+  HeaderContainer,
+  Text,
+  useNavigationTheme,
+  useStyles,
+} from "./theming";
+import TropeIcon from "./trope-icon.svg";
 import { useAudio } from "./useAudio";
 import {
   Maybe,
@@ -29,6 +38,7 @@ import {
   useScreenOptions,
   useScreenTitle,
 } from "./utils";
+import { Asset } from "expo-asset";
 
 type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
   ImportMap<T>[keyof ImportMap<T>];
@@ -102,19 +112,17 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
     return Promise.all(
       verseInfo.flat().map(({ book, chapterVerse }) =>
         // TODO: different labels for sof/reg
-        labelsMap[book]().then(
-          ({ default: labels }) => (labels as Record<string, number[]>)[fmtChV(chapterVerse!)],
-        ),
+        getLabels(book).then((labels) => labels[fmtChV(chapterVerse!)]),
       ),
     );
   }, [verseInfo]);
 
   const book = usePromise<Book[]>(
-    () => Promise.all(aliyah.map(({ k }) => bookMap[k as BookName]())),
+    () => Promise.all(aliyah.map(({ k }) => getBook(k as BookName))),
     [key],
   );
   const transBook_ = usePromise<TransBook[]>(
-    () => Promise.all(aliyah.map(({ k }) => transBookMap[k as BookName]())),
+    () => Promise.all(aliyah.map(({ k }) => getTransBook(k as BookName))),
     [key],
   );
 
@@ -214,13 +222,15 @@ export function PlayView({
   singleVerseAudio = false,
   tropes,
 }: PlayViewProps) {
+  const navTheme = useNavigationTheme();
   const [{ textSize: textSizeMultiplier, audioSpeed }] = useSettings();
 
   const audio = useAudio(audioSource, { speed: audioSpeed });
 
   const labels = usePromise(() => audioLabels, [audioLabels]);
 
-  const [fontsLoaded] = useFonts(fonts);
+  const [fontsLoaded, err] = useFonts();
+  if (err) console.error(err);
 
   const wordStyle = useMemo(
     () => getWordStyle(tikkun, textSizeMultiplier),
@@ -259,17 +269,17 @@ export function PlayView({
                 navigation.navigate("TropeSelectScreen", { tropeType: tropes });
               }}
             >
-              <Image source={tropeIcon} />
+              <TropeIcon fill={navTheme.colors.text} />
             </CustomButton>
           )}
           <Button title="Settings" onPress={() => setModalVisible(true)} />
         </HeaderContainer>
       ),
     },
-    [tropes, setModalVisible, audio?.pause],
+    [tropes, setModalVisible, audio?.pause, navTheme],
   );
 
-  if (!fontsLoaded || !verses) {
+  if ((!fontsLoaded && !err) || !verses) {
     return (
       <View>
         <ActivityIndicator size="large" />
@@ -342,9 +352,6 @@ function parseChV(s: string): [number, number] {
   const [ch, v] = s.split(":");
   return [parseInt(ch) - 1, parseInt(v) - 1];
 }
-
-type Book = ImportType<typeof bookMap>;
-type TransBook = ImportType<typeof transBookMap>;
 
 type VersesProps = {
   verses: VerseInfo[];

@@ -24,10 +24,8 @@ import {
 import { HDate } from "@hebcal/core";
 import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 
-import { fonts } from "./assetImports";
-
-import { useFonts } from "expo-font";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import useFonts from "../fonts";
 import { AboutScreen } from "./AboutScreen";
 import { CalendarScreen } from "./CalendarScreen";
 import { PlayViewScreen } from "./PlayViewScreen";
@@ -285,7 +283,7 @@ const addPrefix = (s: string) =>
   s === "/" ? baseUrl : s.startsWith(baseUrl + urlPrefix) ? s : baseUrl + urlPrefix + s.slice(1);
 
 const App = () => {
-  useFonts(fonts);
+  useFonts();
   const insets = useSafeAreaInsets();
   const cardStyle: StyleProp<ViewStyle> = {
     maxHeight: "100%",
