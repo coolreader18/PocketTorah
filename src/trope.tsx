@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { ScrollView, View } from "react-native";
 import { ScreenProps } from "./App";
 import { PlayView } from "./PlayViewScreen";
-import { hebFont, tropeAudio, tropeLabels, tropeText } from "./assetImports";
+import { getTropeAudio, getTropeLabels, getTropeText, hebFont } from "./assetImports";
 import { CustomButton, Text } from "./theming";
 import { ensureArray, useScreenTitle } from "./utils";
 
@@ -18,7 +18,7 @@ export const TropePhrases = ({ navigation }: ScreenProps<"TropePhrases">) => {
           <CustomButton
             onPress={() => navigation.navigate("TropeSelectScreen", { tropeType })}
             key={tropeType}
-            buttonTitle={tropeText[tropeType]().title}
+            buttonTitle={getTropeText(tropeType).title}
           />
         ))}
       </ScrollView>
@@ -50,7 +50,7 @@ const tropeChars: { [trope: string]: string | string[] } = {
 
 export const TropeSelectScreen = ({ route, navigation }: ScreenProps<"TropeSelectScreen">) => {
   const { tropeType } = route.params;
-  const { title, tropes } = tropeText[tropeType]();
+  const { title, tropes } = getTropeText(tropeType);
   useScreenTitle(navigation, `${title} Tropes`);
   return (
     <ScrollView>
@@ -63,7 +63,7 @@ export const TropeSelectScreen = ({ route, navigation }: ScreenProps<"TropeSelec
             <>
               {name_he}
               {trope in tropeChars && (
-                <Text style={{ fontFamily: "Taamey_D", fontSize: 25 }}>
+                <Text style={{ fontFamily: hebFont, fontSize: 25 }}>
                   {" ( " +
                     ensureArray(tropeChars[trope])
                       .map((x) => "ב" + x)
@@ -81,16 +81,16 @@ export const TropeSelectScreen = ({ route, navigation }: ScreenProps<"TropeSelec
 
 export const TropePlayScreen = ({ navigation, route }: ScreenProps<"TropePlayScreen">) => {
   const { tropeType, trope } = route.params;
-  const typeInfo = tropeText[tropeType]();
+  const typeInfo = getTropeText(tropeType);
   const tropeInfo = typeInfo.tropes[trope];
   const verses = useMemo(() => tropeInfo.text.map((words) => ({ words })), [tropeType, trope]);
 
   useScreenTitle(navigation, `${typeInfo.title} Tropes - ${tropeInfo.name_he}`);
 
-  const audioSource = [tropeAudio[tropeType][trope]];
+  const audioSource = [getTropeAudio(tropeType, trope)];
 
   const audioLabels = useMemo(
-    () => Promise.resolve([tropeLabels[tropeType][trope]]),
+    () => Promise.resolve([getTropeLabels(tropeType)[trope]]),
     [tropeType, trope],
   );
 
