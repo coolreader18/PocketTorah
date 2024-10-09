@@ -34,6 +34,7 @@ import {
   Maybe,
   boolQuery,
   ensureArray,
+  ensureArrayOrNull,
   usePromise,
   useScreenOptions,
   useScreenTitle,
@@ -49,7 +50,7 @@ type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
 export type BookName = keyof typeof audioMap;
 
 const getReading = (leyning: Reading, num: AliyahNum) =>
-  ensureArray(num === "H" ? leyning.haftara : leyning.aliyot[num]);
+  ensureArrayOrNull(num === "H" ? leyning.haftara : leyning.aliyot[num]);
 
 export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
@@ -88,6 +89,13 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
     () => leyning && getReading(leyning, params.aliyah),
     [leyning, params.aliyah],
   );
+
+  if (!aliyah)
+    return (
+      <ScrollView>
+        <Text>Bad aliyah number</Text>
+      </ScrollView>
+    );
 
   const verseInfo = useMemo(() => aliyah && aliyah.map(extractVerses), [aliyah]);
 
