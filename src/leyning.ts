@@ -4,6 +4,7 @@ import {
   AliyotMap,
   Leyning,
   getLeyningOnDate as getFullLeyningOnDate,
+  getLeyningForHolidayKey,
   getLeyningForParsha,
 } from "@hebcal/leyning";
 import { Triennial, getTriennial, getTriennialForParshaHaShavua } from "@hebcal/triennial";
@@ -16,6 +17,7 @@ export type Reading = {
   parsha?: string[];
   aliyot: AliyotMap;
   haftara: Aliyah[];
+  summary: string;
 };
 
 const leyningToReading = (leyning: Leyning): Reading => ({
@@ -24,6 +26,7 @@ const leyningToReading = (leyning: Leyning): Reading => ({
   parsha: leyning.parsha,
   aliyot: leyning.fullkriyah ?? leyning.weekday!,
   haftara: ensureArray(leyning.haft),
+  summary: leyning.summary,
 });
 const triennialToReading = (baseReading: Reading, triennial: TriennialAliyot): Reading => ({
   ...baseReading,
@@ -43,6 +46,32 @@ export function getLeyningOnDate(
     return triennialToReading(reading, triennial);
   }
   return reading;
+}
+
+export function getLeyningsOnDate(
+  hdate: HDate,
+  { tri, il }: { tri: boolean; il: boolean },
+): Reading[] {
+  const leynings = getFullLeyningOnDate(hdate, il, true).flatMap((l) => {
+    if (l.name.en.includes("(Mincha)")) {
+      const altKey = l.name.en.replace("(Mincha)", "(Mincha, Alternate)");
+      const alt = getLeyningForHolidayKey(altKey, undefined, il);
+      if (alt) {
+        const tradKey = l.name.en.replace("(Mincha)", "(Mincha, Traditional)");
+        return [getLeyningForHolidayKey(tradKey, undefined, il) ?? l, alt];
+      }
+    }
+    return [l];
+  });
+  return leynings.map((leyning) => {
+    const reading = leyningToReading(leyning);
+    if (tri && reading.parsha && hdate.getFullYear() >= 5745) {
+      const ev = new ParshaEvent(hdate, reading.parsha, il);
+      const triennial = getTriennialForParshaHaShavua(ev, il) as TriennialAliyot;
+      return triennialToReading(reading, triennial);
+    }
+    return reading;
+  });
 }
 
 declare module "@hebcal/leyning" {
@@ -78,9 +107,9 @@ export const getLeyning = (
     } else {
       return leyning;
     }
-  } else {
-    const d = dateFromStr(readingId);
-    if (!d) return undefined;
-    return getLeyningOnDate(d, { tri, il });
   }
+  const d = dateFromStr(readingId);
+  if (d) return getLeyningOnDate(d, { tri, il });
+  const leyning = getLeyningForHolidayKey(readingId, undefined, il);
+  return leyning && leyningToReading(leyning);
 };

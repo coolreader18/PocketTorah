@@ -27,7 +27,7 @@ import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import useFonts from "../fonts";
 import { AboutScreen } from "./AboutScreen";
-import { CalendarScreen } from "./CalendarScreen";
+import { CalendarLeyningSelectScreen, CalendarScreen } from "./CalendarScreen";
 import { PlayViewScreen } from "./PlayViewScreen";
 import { PlaySettings, SettingsModal } from "./SettingsScreen";
 import { fixReadingId, getLeyning } from "./leyning";
@@ -221,6 +221,7 @@ type Params = {
   Settings: undefined;
   TorahReadingsScreen: undefined;
   Calendar: undefined;
+  CalendarLeyningSelect: { date: `${number}-${number}-${number}` };
   AliyahSelectScreen: {
     readingId: ReadingId;
     tri?: "1" | "0" | null;
@@ -234,7 +235,8 @@ type Params = {
   TropeSelectScreen: { tropeType: TropeType };
   TropePlayScreen: { tropeType: TropeType; trope: string };
 };
-export type ReadingId = Parshah | `${number}-${number}-${number}`;
+type FestivalKey = string;
+export type ReadingId = Parshah | FestivalKey | `${number}-${number}-${number}`;
 const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
 export type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
 export type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
@@ -249,6 +251,7 @@ const linkingConfig: LinkingOptions<Params>["config"] = {
     Settings: "/settings",
     TorahReadingsScreen: "/books",
     Calendar: "/calendar",
+    CalendarLeyningSelect: "/calendar/:date",
     AliyahSelectScreen: "/reading/:readingId",
     PlayViewScreen: "/reading/:readingId/:aliyah",
     TropePhrases: "/tropes",
@@ -313,6 +316,7 @@ const App = () => {
         <Stack.Screen name="AliyahSelectScreen" component={AliyahSelectScreen} />
         <Stack.Screen name="PlayViewScreen" component={PlayViewScreen} />
         <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="CalendarLeyningSelect" component={CalendarLeyningSelectScreen} />
         <Stack.Screen name="TropePhrases" component={TropePhrases} />
         <Stack.Screen name="TropeSelectScreen" component={TropeSelectScreen} />
         <Stack.Screen name="TropePlayScreen" component={TropePlayScreen} />
