@@ -78,7 +78,7 @@ const leyningToProps = (leynings: Reading[]): MarkingProps => ({
   marked: true,
   disabled: false,
   dots: leynings.map((leyning) => ({
-    color: { chag: "red", weekday: "green", shabbat: "darkblue" }[leyning.kind],
+    color: { chag: "red", weekday: "green", shabbat: "darkblue", mincha: "orange" }[leyning.kind],
   })),
 });
 const getMarkedDates = (year: number, { tri, il }: { tri: boolean; il: boolean }) => {

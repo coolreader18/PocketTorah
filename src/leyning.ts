@@ -9,29 +9,35 @@ import {
 } from "@hebcal/leyning";
 import { Triennial, getTriennial, getTriennialForParshaHaShavua } from "@hebcal/triennial";
 import { ReadingId, dateFromStr, isParshah } from "./App";
-import { ensureArray } from "./utils";
+import { ensureArray, ensureArrayOrNull } from "./utils";
 
 export type Reading = {
   name: { en: string; he: string };
-  kind: "shabbat" | "chag" | "weekday";
+  kind: "shabbat" | "chag" | "weekday" | "mincha";
   parsha?: string[];
   aliyot: AliyotMap;
-  haftara: Aliyah[];
+  haftara: Aliyah[] | null;
   summary: string;
 };
 
 const leyningToReading = (leyning: Leyning): Reading => ({
   name: leyning.name,
-  kind: !leyning.parsha ? "chag" : leyning.fullkriyah ? "shabbat" : "weekday",
+  kind: leyning.name.en.includes("Mincha")
+    ? "mincha"
+    : !leyning.parsha
+    ? "chag"
+    : leyning.fullkriyah
+    ? "shabbat"
+    : "weekday",
   parsha: leyning.parsha,
   aliyot: leyning.fullkriyah ?? leyning.weekday!,
-  haftara: ensureArray(leyning.haft),
+  haftara: ensureArrayOrNull(leyning.haft),
   summary: leyning.summary,
 });
 const triennialToReading = (baseReading: Reading, triennial: TriennialAliyot): Reading => ({
   ...baseReading,
   aliyot: triennial.aliyot,
-  haftara: ensureArray(triennial.haft ?? baseReading.haftara),
+  haftara: ensureArrayOrNull(triennial.haft ?? baseReading.haftara),
 });
 
 export function getLeyningOnDate(

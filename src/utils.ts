@@ -59,6 +59,8 @@ export function useScreenTitle(
 }
 
 export const ensureArray = <T>(x: T | T[]): T[] => (Array.isArray(x) ? x : [x]);
+export const ensureArrayOrNull = <T>(x: T | null | T[]): T[] | null =>
+  x && (Array.isArray(x) ? (x.length ? x : null) : [x]);
 export const boolQuery = (x: "1" | "0" | null | undefined): boolean | null =>
   x === undefined
     ? null

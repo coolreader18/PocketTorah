@@ -32,7 +32,7 @@ import { PlayViewScreen } from "./PlayViewScreen";
 import { PlaySettings, SettingsModal } from "./SettingsScreen";
 import { fixReadingId, getLeyning } from "./leyning";
 import { SettingsProvider, useSettings } from "./settings";
-import { CustomButton, HeaderContainer, useNavigationTheme } from "./theming";
+import { CustomButton, HeaderContainer, Text, useNavigationTheme } from "./theming";
 import { TropePhrases, TropePlayScreen, TropeSelectScreen, TropeType } from "./trope";
 import { boolQuery, useScreenOptions, useScreenTitle } from "./utils";
 
@@ -85,7 +85,12 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
   const tri = boolQuery(route.params.tri) ?? settingsTri;
 
   const reading = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
-  if (!reading) throw new Error(`bad readingid ${readingId}`);
+  if (!reading)
+    return (
+      <ScrollView>
+        <Text>Bad reading id</Text>
+      </ScrollView>
+    );
 
   useScreenTitle(navigation, reading.name.en ?? "404");
 
@@ -104,8 +109,16 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
   const special = !reading.parsha;
 
   const content = aliyahNums
-    .filter((num) => num in kriyah || (num === "H" && reading.haftara))
-    .map((num) => (
+    .flatMap((num) => {
+      const summary =
+        num in kriyah
+          ? formatAliyahShort(kriyah[num], special || kriyah[num].k != kriyah[1].k)
+          : num === "H" && reading.haftara
+          ? makeSummaryFromParts(reading.haftara)
+          : null;
+      return summary ? [{ num, summary }] : [];
+    })
+    .map(({ num, summary }) => (
       <CustomButton
         key={num}
         onPress={() =>
@@ -115,11 +128,7 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
             tri: route.params.tri === null ? "1" : route.params.tri,
           })
         }
-        buttonTitle={`${namePrefix}${aliyahName(num)}: ${
-          num === "H"
-            ? makeSummaryFromParts(reading.haftara)
-            : formatAliyahShort(kriyah[num], special || kriyah[num].k != kriyah[1].k)
-        }`}
+        buttonTitle={`${namePrefix}${aliyahName(num)}: ${summary}`}
       />
     ));
   return (
