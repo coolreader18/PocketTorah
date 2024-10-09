@@ -96,7 +96,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   const [audioSource, sofMismatch] = useMemo(() => {
     const sofMismatch = Array<boolean>(verseInfo.flat().length).fill(false);
     const arr = verseInfo.flat().map(({ book, chapterVerse, sof }, i) => {
-      const src = audioMap[book][fmtChV(chapterVerse!)]?.();
+      const src = audioMap[book]?.[fmtChV(chapterVerse!)]?.();
       if (!src) return null;
       const [pref, fallback] = sof ? [src.sof, src.reg] : [src.reg, src.sof];
       if (pref != null) return pref;

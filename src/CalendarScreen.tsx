@@ -4,18 +4,23 @@ import { Calendar } from "react-native-calendars";
 import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
 import { toMarkingFormat } from "react-native-calendars/src/interface";
 import { MarkedDates } from "react-native-calendars/src/types";
-import { dateToStr, ScreenProps } from "./App";
-import { getLeyningOnDate, Reading } from "./leyning";
+import { dateFromStr, dateToStr, ScreenProps } from "./App";
+import { fixReadingId, getLeyningOnDate, getLeyningsOnDate, Reading } from "./leyning";
 import { useSettings } from "./settings";
-import { useCalendarTheme } from "./theming";
+import { CustomButton, Text, useCalendarTheme } from "./theming";
+import { ScrollView } from "react-native";
+import { useScreenTitle } from "./utils";
 
 export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [{ tri, il }] = useSettings();
   const theme = useCalendarTheme();
+  type FuncOnly<F extends (...args: any) => any> = (...args: Parameters<F>) => ReturnType<F>;
+  const Calend: FuncOnly<typeof Calendar> = Calendar;
   return (
-    <Calendar
+    <Calend
       theme={theme}
+      markingType="multi-dot"
       disableAllTouchEventsForDisabledDays
       disableAllTouchEventsForInactiveDays
       disabledByDefault
@@ -30,9 +35,13 @@ export function CalendarScreen({ navigation }: ScreenProps<"Calendar">) {
           Promise.resolve().then(() => fillMarkedDatesCache(year + 1, { tri, il }));
       }}
       onDayPress={({ year, month, day }) => {
-        navigation.navigate("AliyahSelectScreen", {
-          readingId: dateToStr(new Date(year, month - 1, day)),
-        });
+        const date = new Date(year, month - 1, day);
+        const dateStr = dateToStr(date);
+        if (getLeyningsOnDate(new HDate(date), { tri, il }).length > 1) {
+          navigation.navigate("CalendarLeyningSelect", { date: dateStr });
+        } else {
+          navigation.navigate("AliyahSelectScreen", { readingId: dateStr });
+        }
       }}
     />
   );
@@ -58,19 +67,44 @@ const fillMarkedDatesCache = (
     date.abs() <= endDate.abs();
     date = date.next()
   ) {
-    const l = getLeyningOnDate(date, { tri, il });
-    if (l) {
+    const l = getLeyningsOnDate(date, { tri, il });
+    if (l.length) {
       markedDates[toMarkingFormat(date.greg())] = leyningToProps(l);
     }
   }
   return markedDates;
 };
-const leyningToProps = (leyning: Reading): MarkingProps => ({
+const leyningToProps = (leynings: Reading[]): MarkingProps => ({
   marked: true,
   disabled: false,
-  dotColor: { chag: "red", weekday: "green", shabbat: "darkblue" }[leyning.kind],
+  dots: leynings.map((leyning) => ({
+    color: { chag: "red", weekday: "green", shabbat: "darkblue" }[leyning.kind],
+  })),
 });
 const getMarkedDates = (year: number, { tri, il }: { tri: boolean; il: boolean }) => {
   const markedDates = fillMarkedDatesCache(year, { tri, il });
   return { ...markedDates };
 };
+
+export function CalendarLeyningSelectScreen({
+  navigation,
+  route,
+}: ScreenProps<"CalendarLeyningSelect">) {
+  const dateStr = fixReadingId(route.params.date);
+  const date = dateFromStr(dateStr);
+  const [{ tri, il }] = useSettings();
+  useScreenTitle(navigation, `Leynings on ${dateStr}`);
+  const content =
+    date == null
+      ? []
+      : getLeyningsOnDate(date, { tri, il }).map((leyning) => (
+          <CustomButton
+            key={leyning.name.en}
+            onPress={() =>
+              navigation.navigate("AliyahSelectScreen", { readingId: leyning.name.en })
+            }
+            buttonTitle={`${leyning.name.en} (${leyning.summary})`}
+          />
+        ));
+  return <ScrollView>{content}</ScrollView>;
+}
