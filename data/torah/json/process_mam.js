@@ -17,6 +17,7 @@ const namemap = {
   מלאכי: "Malachi",
   ירמיהו: "Jeremiah",
   יהושע: "Joshua",
+  יונה: "Jonah",
   דברים: "Deuteronomy",
   ויקרא: "Leviticus",
   יחזקאל: "Ezekiel",
