@@ -139,8 +139,22 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
   );
 }
 
-const aliyahName = (num: AliyahNum) =>
-  num === "M" ? "Maftir Aliyah" : num == "H" ? "Haftarah" : `Aliyah ${num}`;
+const pluralRules = new Intl.PluralRules(undefined, { type: "ordinal" });
+pluralRules.select(1);
+const ordinals: { [k in Intl.LDMLPluralRule]: string } = {
+  zero: "th",
+  one: "st",
+  two: "nd",
+  few: "rd",
+  many: "th",
+  other: "th",
+};
+export const aliyahName = (num: AliyahNum) =>
+  num === "M"
+    ? "Maftir Aliyah"
+    : num == "H"
+    ? "Haftarah"
+    : `${num}${ordinals[pluralRules.select(Number(num))]} Aliyah`;
 
 export const dateToStr = (date: HDate | Date) =>
   `${date.getFullYear()}-${
