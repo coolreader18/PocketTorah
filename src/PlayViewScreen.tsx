@@ -4,7 +4,7 @@ import { AVPlaybackSource } from "expo-av";
 import React, { useMemo, useState } from "react";
 import useFonts from "../fonts";
 import * as RN from "react-native";
-import { ActivityIndicator, Button, Image, ScrollView, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Button, ScrollView, TouchableOpacity, View } from "react-native";
 import { aliyahName, AliyahNum, NavigationProp, ScreenProps } from "./App";
 import { SettingsModal } from "./SettingsScreen";
 import {
@@ -34,19 +34,11 @@ import { useAudio } from "./useAudio";
 import {
   Maybe,
   boolQuery,
-  ensureArray,
   ensureArrayOrNull,
   usePromise,
   useScreenOptions,
   useScreenTitle,
 } from "./utils";
-import { Asset } from "expo-asset";
-
-type ImportType<T extends { [k: string]: () => Promise<{ default: any }> }> =
-  ImportMap<T>[keyof ImportMap<T>];
-type ImportMap<T extends { [k: string]: () => Promise<{ default: any }> }> = {
-  [k in keyof T]: Awaited<ReturnType<T[k]>>["default"];
-};
 
 export type BookName = keyof typeof audioMap;
 

@@ -3,6 +3,8 @@
   "compilerOptions": {
     "module": "ES2020",
     "strictBindCallApply": true,
-    "types": ["webpack-env"]
+    "types": ["webpack-env"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   }
 }
