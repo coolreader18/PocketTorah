@@ -9,7 +9,7 @@ import {
 } from "@hebcal/leyning";
 import { Triennial, getTriennial, getTriennialForParshaHaShavua } from "@hebcal/triennial";
 import { ReadingId, dateFromStr, isParshah } from "./App";
-import { ensureArray, ensureArrayOrNull } from "./utils";
+import { ensureArrayOrNull } from "./utils";
 
 export type Reading = {
   name: { en: string; he: string };

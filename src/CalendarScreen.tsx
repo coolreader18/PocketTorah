@@ -5,9 +5,9 @@ import { MarkingProps } from "react-native-calendars/src/calendar/day/marking";
 import { toMarkingFormat } from "react-native-calendars/src/interface";
 import { MarkedDates } from "react-native-calendars/src/types";
 import { dateFromStr, dateToStr, ScreenProps } from "./App";
-import { fixReadingId, getLeyningOnDate, getLeyningsOnDate, Reading } from "./leyning";
+import { fixReadingId, getLeyningsOnDate, Reading } from "./leyning";
 import { useSettings } from "./settings";
-import { CustomButton, Text, useCalendarTheme } from "./theming";
+import { CustomButton, useCalendarTheme } from "./theming";
 import { ScrollView } from "react-native";
 import { useScreenTitle } from "./utils";
 
