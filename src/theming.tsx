@@ -38,8 +38,8 @@ const makeStyles = (dark: boolean) => {
     },
 
     word: { flex: 0, padding: 4 },
-    wordMaqaf: { paddingLeft: 0 },
-    wordPostMaqaf: { paddingRight: 0 },
+    wordPreMaqaf: { marginLeft: -4 },
+    wordPostMaqaf: { marginRight: -4 },
     sofAudioMismatch: {
       color: dark ? "rgb(255, 111, 111)" : "rgb(221, 0, 0)",
     },

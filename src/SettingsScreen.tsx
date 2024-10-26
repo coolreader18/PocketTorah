@@ -1,7 +1,7 @@
 import Slider from "@react-native-community/slider";
 import React, { useEffect, useState } from "react";
 import { Modal, Switch, TouchableOpacity, View } from "react-native";
-import { Word, getWordStyle } from "./PlayViewScreen";
+import { Word, WordProps, getWordStyle } from "./PlayViewScreen";
 import { UpdateSettings, useSettings } from "./settings";
 import { CustomButton, ModalSection, Text, useStyles, wrapComponent } from "./theming";
 import { Audio } from "./useAudio";
@@ -29,6 +29,11 @@ type PlaySettingsProps = {
   setAudioSpeed?: (speed: number) => void;
 };
 
+const WordWithStyle = (props: WordProps) => (
+  <Text style={props.wordStyle.style}>
+    <Word {...props} />
+  </Text>
+);
 export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps) {
   const [settings, updateSettings] = useSettings();
   const [tempSettings, setTempSettings] = useState(settings);
@@ -53,8 +58,8 @@ export function PlaySettings({ closeSettings, setAudioSpeed }: PlaySettingsProps
           value={tempSettings.textSize}
           onValueChange={(textSize) => updateTempSettings({ textSize })}
         />
-        <Word word={breishit} wordStyle={getWordStyle(false, tempSettings.textSize)} />
-        <Word word={breishit} wordStyle={getWordStyle(true, tempSettings.textSize)} />
+        <WordWithStyle word={breishit} wordStyle={getWordStyle(false, tempSettings.textSize)} />
+        <WordWithStyle word={breishit} wordStyle={getWordStyle(true, tempSettings.textSize)} />
       </ModalSection>
       {setAudioSpeed && (
         <ModalSection>

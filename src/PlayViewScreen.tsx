@@ -3,6 +3,7 @@ import binarySearch from "binary-search";
 import { AVPlaybackSource } from "expo-av";
 import React, { useMemo, useState } from "react";
 import useFonts from "../fonts";
+import * as RN from "react-native";
 import { ActivityIndicator, Button, Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { aliyahName, AliyahNum, NavigationProp, ScreenProps } from "./App";
 import { SettingsModal } from "./SettingsScreen";
@@ -402,7 +403,7 @@ const Verses = React.memo(function Verses({
 });
 
 export const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
-  const deleteRegex = tikkun ? /[\/\u0591-\u05C7]/g : /\//g;
+  const deleteRegex = tikkun ? /[\/\u0591-\u05C7]/g : /[\/־]/g;
   const fontFamily = tikkun ? tikkunFont : hebFont;
   const fontMul = tikkun ? 30 : 36;
   return {
@@ -440,17 +441,22 @@ const Verse = React.memo(function Verse(props: VerseProps) {
         key={wordIndex}
         {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime, postMaqaf }}
         active={wordIndex === activeWordIndex}
-        verseNum={wordIndex === 0 && verse.chapterVerse ? fmtChV(verse.chapterVerse) : undefined}
         // TODO: parse the trope somehow, maybe, to get it just on the mercha tipcha sof pasuk
         sofAudioMismatch={verse.sofAudioMismatch && verse.words.length - wordIndex <= 3}
       />
     );
   });
 
+  const styles = useStyles();
   return (
     <>
-      <Text>
+      <Text style={[wordStyle.style, { userSelect: "none" }]}>
         <Text>{"\u200F"}</Text>
+        {verse.chapterVerse && (
+          <View style={styles.verseNumWrapper}>
+            <RN.Text style={styles.verseNum}>{fmtChV(verse.chapterVerse)}</RN.Text>
+          </View>
+        )}
         {words}
       </Text>
       {verse.translation && <Text style={{ paddingHorizontal: 5 }}>{verse.translation}</Text>}
@@ -464,10 +470,9 @@ type WordIndexInfo = Maybe<
   { verseIndex: number; wordIndex: number } & Maybe<{ changeAudioTime: ChangeAudioTime }>
 >;
 
-type WordProps = WordIndexInfo & {
+export type WordProps = WordIndexInfo & {
   wordStyle: WordStyle;
   word: string;
-  verseNum?: string;
   active?: boolean;
   postMaqaf?: boolean;
   sofAudioMismatch?: boolean;
@@ -476,7 +481,6 @@ type WordProps = WordIndexInfo & {
 export function Word({
   word,
   wordStyle,
-  verseNum,
   active,
   verseIndex,
   wordIndex,
@@ -486,35 +490,27 @@ export function Word({
 }: WordProps) {
   const styles = useStyles();
 
-  const wordElem = (
-    <Text
-      style={[
-        styles.word,
-        !wordStyle.tikkun && word.endsWith(MAQAF) && styles.wordMaqaf,
-        !wordStyle.tikkun && postMaqaf && styles.wordPostMaqaf,
-        sofAudioMismatch && styles.sofAudioMismatch,
-        wordStyle.style,
-        active && styles.active,
-      ]}
-    >
-      {word.replace(wordStyle.deleteRegex, "")}
-    </Text>
-  );
+  const maqaf = !wordStyle.tikkun && word.endsWith(MAQAF);
+  const commonStyles = sofAudioMismatch && styles.sofAudioMismatch;
   return (
-    <TouchableOpacity
-      onPress={changeAudioTime && (() => changeAudioTime(verseIndex, wordIndex))}
-      disabled={!changeAudioTime}
-    >
-      {verseNum ? (
-        <Text style={{ fontFamily: wordStyle.style.fontFamily }}>
-          <View style={styles.verseNumWrapper}>
-            <Text style={styles.verseNum}>{verseNum}</Text>
-          </View>
-          {wordElem}
-        </Text>
-      ) : (
-        wordElem
-      )}
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        onPress={changeAudioTime && (() => changeAudioTime(verseIndex, wordIndex))}
+        disabled={!changeAudioTime}
+      >
+        <RN.Text
+          style={[
+            commonStyles,
+            styles.word,
+            maqaf && styles.wordPreMaqaf,
+            !wordStyle.tikkun && postMaqaf && styles.wordPostMaqaf,
+            active && styles.active,
+          ]}
+        >
+          {word.replace(wordStyle.deleteRegex, "")}
+        </RN.Text>
+      </TouchableOpacity>
+      {maqaf && <Text style={commonStyles}>{MAQAF}</Text>}
+    </>
   );
 }
