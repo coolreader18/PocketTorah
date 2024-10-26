@@ -4,7 +4,7 @@ import { AVPlaybackSource } from "expo-av";
 import React, { useMemo, useState } from "react";
 import useFonts from "../fonts";
 import { ActivityIndicator, Button, Image, ScrollView, TouchableOpacity, View } from "react-native";
-import { AliyahNum, NavigationProp, ScreenProps } from "./App";
+import { aliyahName, AliyahNum, NavigationProp, ScreenProps } from "./App";
 import { SettingsModal } from "./SettingsScreen";
 import {
   Book,
@@ -76,7 +76,7 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   const tri = boolQuery(route.params.tri) ?? settingsTri;
   const leyning = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
 
-  useScreenTitle(navigation, leyning?.name.en ?? "404");
+  useScreenTitle(navigation, leyning?.name.en?.concat(`, ${aliyahName(params.aliyah)}`) ?? "404");
 
   if (!leyning)
     return (
@@ -144,12 +144,17 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
         )
       : null;
 
+  const tropes =
+    params.aliyah === "H"
+      ? "haftarah"
+      : params.readingId.match(/Rosh Hashana|Yom Kippur/i)
+      ? "hhd"
+      : "torah";
   return (
     <PlayView
       audioLabels={labelsPromise}
       tikkun={tikkunOn}
-      tropes={params.aliyah === "H" ? "haftarah" : "torah"}
-      {...{ verses, audioSource, buttons, navigation }}
+      {...{ verses, tropes, audioSource, buttons, navigation }}
     />
   );
 }
@@ -205,7 +210,7 @@ type PlayViewProps = {
   navigation: NavigationProp;
   forceLinebreakVerses?: boolean;
   singleVerseAudio?: boolean;
-  tropes?: "torah" | "haftarah";
+  tropes?: "torah" | "haftarah" | "hhd";
 };
 export type Verse = {
   book: BookName;
