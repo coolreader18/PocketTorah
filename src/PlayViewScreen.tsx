@@ -1,4 +1,4 @@
-import { Aliyah } from "@hebcal/leyning";
+import { Aliyah, NUM_VERSES } from "@hebcal/leyning";
 import binarySearch from "binary-search";
 import { AVPlaybackSource } from "expo-av";
 import React, { useMemo, useState } from "react";
@@ -18,7 +18,6 @@ import {
   tikkunFont,
 } from "./assetImports";
 import { Reading, fixReadingId, getLeyning } from "./leyning";
-import { numverses } from "./numVerses";
 import { useSettings } from "./settings";
 import {
   CustomButton,
@@ -166,7 +165,7 @@ const extractVerses = (aliyah: Aliyah): Verse[] => {
   // these values are 0-indexed and **inclusive**
   const [begChapter, begVerse] = parseChV(aliyah.b);
   const [endChapter, endVerse] = parseChV(aliyah.e);
-  const ret = numverses[aliyah.k as keyof typeof numverses].slice(1).flatMap((numV, cNum) => {
+  const ret = NUM_VERSES[aliyah.k].slice(1).flatMap((numV, cNum) => {
     if (cNum < begChapter || cNum > endChapter) return [];
     const verses = range(numV).map(
       (_, vNum): Verse => ({ book: aliyah.k as BookName, chapterVerse: [cNum, vNum], sof: false }),

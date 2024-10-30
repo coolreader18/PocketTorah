@@ -2419,25 +2419,48 @@
   dependencies:
     "@hapi/hoek" "^9.0.0"
 
-"@hebcal/core@^4.3.4", "@hebcal/core@^4.4.0":
-  version "4.4.1"
-  resolved "https://registry.npmjs.org/@hebcal/core/-/core-4.4.1.tgz"
-  integrity sha512-GY26X4JOCA3nF8ytFTaQxJeZNF923gvmvYmk2PJSg5EAl3MGTOgYo90BkcEqzfa9BimTte2ya3x2+wSAqvc46A==
-
-"@hebcal/leyning@^7.4.4", "@hebcal/leyning@^7.4.5":
-  version "7.4.5"
-  resolved "https://registry.npmjs.org/@hebcal/leyning/-/leyning-7.4.5.tgz"
-  integrity sha512-nHLsWfvYUS2Hxr9675k0GpligenNRsOc3HIs9buskyD1utDuqZ2EBA5J+oqc1nb74IarlT+FQ/OMRZNU7BXt3A==
+"@hebcal/core@^5.5.0", "@hebcal/core@^5.5.2":
+  version "5.5.2"
+  resolved "https://registry.yarnpkg.com/@hebcal/core/-/core-5.5.2.tgz#8f2be0ef05fab4fa0c0f663e2ff9c8fd5e16db35"
+  integrity sha512-lRI7I13PXvEX2xT+MSqAG3ZLHEGPM1gWLbVMvyacYSgcIcqQtKorzmiXIPAXWseCwixf8qs0YK2KJkKnihaJkw==
   dependencies:
-    "@hebcal/core" "^4.4.0"
+    "@hebcal/hdate" "^0.11.4"
+    "@hebcal/noaa" "^0.8.14"
+    tslib "^2.7.0"
 
-"@hebcal/triennial@^1.4.1":
-  version "1.4.1"
-  resolved "https://registry.npmjs.org/@hebcal/triennial/-/triennial-1.4.1.tgz"
-  integrity sha512-YMs2XnHYzuTs1UE9HhFzB73JNWusDS64TUgzLUlYffEjzbw9Tr9Ut4aey7QLkTNaNq2yCH7ABLn9C5ICmptXUA==
+"@hebcal/hdate@^0.11.4":
+  version "0.11.5"
+  resolved "https://registry.yarnpkg.com/@hebcal/hdate/-/hdate-0.11.5.tgz#c4ac894276ec82720f08779453b6659d68d712ea"
+  integrity sha512-L/39A8hZXUdAIIv7vzZoPmmwlV9Ck+Zwl7dPl/6EnsRmZ6FCf9Y1PkFj8p4lOJD+vYSbo7DwACyUqMeKX3u7aA==
+
+"@hebcal/leyning@^8.2.3":
+  version "8.2.7"
+  resolved "https://registry.yarnpkg.com/@hebcal/leyning/-/leyning-8.2.7.tgz#d99f652ce3ecd059476d52deef6318f56978b005"
+  integrity sha512-Cx8Um+Asgb0HKv1cottWoSj66Y5ss68sCjBu17HMWIV7GBcwptPvwSFLJ7Cettp9ltgjbPQgg3hjLNjhsQH1Nw==
   dependencies:
-    "@hebcal/core" "^4.4.0"
-    "@hebcal/leyning" "^7.4.5"
+    "@hebcal/core" "^5.5.2"
+    tslib "^2.7.0"
+
+"@hebcal/leyning@^8.2.8":
+  version "8.2.8"
+  resolved "https://registry.yarnpkg.com/@hebcal/leyning/-/leyning-8.2.8.tgz#bcc8a60662d81f227eb2324fc08b24fc386cd781"
+  integrity sha512-MLHkJLzurCsQUDLFLCb1ha3PWZbVf3kB31wq8mdqO7gIHr5lJKyvUUgTDTmu1XGjpDoHY4+nqfA62IjndYCdpQ==
+  dependencies:
+    "@hebcal/core" "^5.5.2"
+    tslib "^2.8.0"
+
+"@hebcal/noaa@^0.8.14":
+  version "0.8.14"
+  resolved "https://registry.yarnpkg.com/@hebcal/noaa/-/noaa-0.8.14.tgz#c7e18016589e61bb35bd8edf4ac2d4e1c76cd1f4"
+  integrity sha512-bEi88KS2JZm+94uOnAz+YL7JLaCxfVlo17KhMWu7HvUf2Sjr5DNH9gvJ0Nk3/Oxkm7eJtAzsOOCKce2kd7Y8Rw==
+
+"@hebcal/triennial@^5.1.3":
+  version "5.1.3"
+  resolved "https://registry.yarnpkg.com/@hebcal/triennial/-/triennial-5.1.3.tgz#66de692ffa2f913ea264c7d48d69371e03399f11"
+  integrity sha512-exPqw3zAgCvJxLg9hyF+88vlIB0IRTYgwc7dTiPKMv+MsyVwl6WRjYAaNWYwmUTIR8aR2yvBtZNz/4E1TkeeYQ==
+  dependencies:
+    "@hebcal/core" "^5.5.0"
+    "@hebcal/leyning" "^8.2.3"
 
 "@humanwhocodes/config-array@^0.11.11":
   version "0.11.11"
@@ -11333,6 +11356,11 @@ tslib@^2.0.1, tslib@^2.0.3, tslib@^2.1.0, tslib@^2.4.0:
   version "2.6.2"
   resolved "https://registry.npmjs.org/tslib/-/tslib-2.6.2.tgz"
   integrity sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==
+
+tslib@^2.7.0, tslib@^2.8.0:
+  version "2.8.0"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.8.0.tgz#d124c86c3c05a40a91e6fdea4021bd31d377971b"
+  integrity sha512-jWVzBLplnCmoaTr13V9dYbiQ99wvZRd0vNWaDRg+aVYRcjDF3nDksxFDE/+fkXnKhpnUUkmx5pK/v8mCtLVqZA==
 
 tsutils@^3.21.0:
   version "3.21.0"

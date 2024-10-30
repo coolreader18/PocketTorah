@@ -3,16 +3,23 @@ import {
   Aliyah,
   AliyotMap,
   Leyning,
+  LeyningNames,
+  LeyningWeekday,
   getLeyningOnDate as getFullLeyningOnDate,
   getLeyningForHolidayKey,
   getLeyningForParsha,
 } from "@hebcal/leyning";
-import { Triennial, getTriennial, getTriennialForParshaHaShavua } from "@hebcal/triennial";
+import {
+  Triennial,
+  TriennialAliyot,
+  getTriennial,
+  getTriennialForParshaHaShavua,
+} from "@hebcal/triennial";
 import { ReadingId, dateFromStr, isParshah } from "./App";
 import { ensureArrayOrNull } from "./utils";
 
 export type Reading = {
-  name: { en: string; he: string };
+  name: LeyningNames;
   kind: "shabbat" | "chag" | "weekday" | "mincha";
   parsha?: string[];
   aliyot: AliyotMap;
@@ -20,23 +27,30 @@ export type Reading = {
   summary: string;
 };
 
-const leyningToReading = (leyning: Leyning): Reading => ({
+type KeysOfUnion<T> = T extends any ? keyof T : never;
+type ValuesOfUnion<T, K> = T extends any ? (K extends keyof T ? T[K] : null) : never;
+const getIfPresent = <T extends object, K extends KeysOfUnion<T>>(
+  obj: T,
+  key: K,
+): ValuesOfUnion<T, K> => (key in obj ? obj[key] : null) as ValuesOfUnion<T, K>;
+
+const leyningToReading = (leyning: Leyning | LeyningWeekday): Reading => ({
   name: leyning.name,
   kind: leyning.name.en.includes("Mincha")
     ? "mincha"
     : !leyning.parsha
     ? "chag"
-    : leyning.fullkriyah
+    : "fullkriyah" in leyning && leyning.fullkriyah
     ? "shabbat"
     : "weekday",
   parsha: leyning.parsha,
-  aliyot: leyning.fullkriyah ?? leyning.weekday!,
-  haftara: ensureArrayOrNull(leyning.haft),
+  aliyot: getIfPresent(leyning, "fullkriyah") || leyning.weekday!,
+  haftara: ensureArrayOrNull(getIfPresent(leyning, "haft")),
   summary: leyning.summary,
 });
 const triennialToReading = (baseReading: Reading, triennial: TriennialAliyot): Reading => ({
   ...baseReading,
-  aliyot: triennial.aliyot,
+  aliyot: triennial.aliyot!,
   haftara: ensureArrayOrNull(triennial.haft ?? baseReading.haftara),
 });
 
@@ -46,8 +60,8 @@ export function getLeyningOnDate(
 ): Reading | undefined {
   const leyning = getFullLeyningOnDate(hdate, il);
   const reading = leyning && leyningToReading(leyning);
-  if (tri && reading?.parsha && hdate.getFullYear() >= 5745) {
-    const ev = new ParshaEvent(hdate, reading.parsha, il);
+  if (tri && reading?.kind === "shabbat" && hdate.getFullYear() >= 5745) {
+    const ev = new ParshaEvent(hdate, reading.parsha!, il);
     const triennial = getTriennialForParshaHaShavua(ev, il) as TriennialAliyot;
     return triennialToReading(reading, triennial);
   }
@@ -80,20 +94,6 @@ export function getLeyningsOnDate(
   });
 }
 
-declare module "@hebcal/leyning" {
-  export function getLeyningOnDate(
-    hdate: HDate,
-    il: boolean,
-    wantarray?: false,
-  ): Leyning | undefined;
-  export function getLeyningOnDate(hdate: HDate, il: boolean, wantarray: true): Leyning[];
-}
-
-export type TriennialAliyot = import("@hebcal/triennial").TriennialAliyot & {
-  haft: Aliyah | Aliyah[];
-  haftara: string;
-};
-
 export const fixReadingId = (x: ReadingId): ReadingId =>
   isParshah(x) ? x : (decodeURIComponent(x) as ReadingId);
 export const getLeyning = (
@@ -108,7 +108,7 @@ export const getLeyning = (
       const triennial = getTriennial(year, il).getReading(
         readingId,
         Triennial.getYearNumber(year) - 1,
-      ) as TriennialAliyot;
+      );
       return triennialToReading(leyning, triennial);
     } else {
       return leyning;
