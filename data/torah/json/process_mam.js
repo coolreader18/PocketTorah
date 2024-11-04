@@ -30,6 +30,12 @@ const namemap = {
   ישעיהו: "Isaiah",
   בראשית: "Genesis",
   במדבר: "Numbers",
+  קהלת: "Ecclesiastes",
+  "שיר השירים": "Song of Songs",
+  רות: "Ruth",
+  חבקוק: "Habakkuk",
+  אסתר: "Esther",
+  איכה: "Lamentations",
 };
 
 const stripPref = (s, ...prefs) =>
