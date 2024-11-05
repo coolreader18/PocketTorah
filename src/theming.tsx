@@ -1,9 +1,8 @@
 import { DarkTheme, DefaultTheme } from "@react-navigation/native";
 import React, { JSXElementConstructor } from "react";
 import * as RN from "react-native";
-import { TouchableOpacity } from "react-native";
+import { TouchableOpacity, Platform } from "react-native";
 import { useDarkMode } from "./App";
-import { platformSelect } from "./utils";
 
 export const wrapComponent =
   <P extends { style?: RN.StyleProp<any> }>(
@@ -24,9 +23,15 @@ export const HeaderContainer = wrapComponent(RN.View, "headerContainer");
 const makeStyles = (dark: boolean) => {
   const navTheme = dark ? DarkTheme : DefaultTheme;
   const borderColor = navTheme.colors.border;
+  const linkColor = dark ? "rgb(144, 196, 249)" : "#EE0000";
   return RN.StyleSheet.create({
     text: {
       color: navTheme.colors.text,
+    },
+    externalLink: {
+      color: linkColor,
+      fontWeight: "bold",
+      textDecorationLine: "underline",
     },
     buttonContainer: {
       margin: 5,
@@ -67,15 +72,15 @@ const makeStyles = (dark: boolean) => {
       textAlign: "center",
     },
     verseNum: {
-      marginBottom: platformSelect({ web: 0 }, 10),
+      marginBottom: Platform.select({ web: 0, default: 10 }),
       fontSize: 10,
       fontFamily: "inital",
-      paddingRight: platformSelect({ android: 5 }, null),
+      paddingRight: Platform.select({ android: 5 }),
       // @ts-ignore
-      verticalAlign: platformSelect({ web: "100%" }, null),
+      verticalAlign: Platform.select({ web: "100%" }),
     },
     // @ts-ignore
-    verseNumWrapper: platformSelect({ web: { display: "contents" } }, {}),
+    verseNumWrapper: Platform.select({ web: { display: "contents" } }, {}),
     baseBackground: {
       backgroundColor: navTheme.colors.background,
     },

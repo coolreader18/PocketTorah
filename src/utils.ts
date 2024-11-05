@@ -1,11 +1,7 @@
 import { NavigationProp } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { Platform } from "react-native";
 
 export type Maybe<T> = { [k in keyof T]?: undefined } | T;
-
-export const platformSelect = <T>(plats: { [k in Platform["OS"]]?: T }, default_: T): T =>
-  Platform.OS in plats ? plats[Platform.OS]! : default_;
 
 export interface ExteriorPromise<T> {
   promise: Promise<T>;
