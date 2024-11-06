@@ -1,26 +1,44 @@
 // webpack config file for native targets
 
 import * as Repack from "@callstack/repack";
+import { createRequire } from "node:module";
 import * as path from "path";
 import TerserPlugin from "terser-webpack-plugin";
 import webpack from "webpack";
-import { babelLoaderConfigurations, imageLoaderConfigurations } from "./webpack.config.common.mjs";
+import {
+  babelLoaderConfigurations,
+  imageLoaderConfigurations,
+  appDirectory,
+  babelRuntimeAlias,
+} from "./webpack.config.common.mjs";
 
-const appDirectory = Repack.getDirname(import.meta.url);
+const { resolve } = createRequire(import.meta.url);
 
-/** @returns {webpack.Configuration} */
+/**
+ * Webpack configuration.
+ * You can also export a static object or a function returning a Promise.
+ *
+ * @param env Environment options passed from either Webpack CLI or React Native Community CLI
+ *            when running with `react-native start/bundle`.
+ * @returns {webpack.Configuration}
+ */
 export default (env) => {
   const {
     mode = "development",
     context = appDirectory,
+    entry = "./index.ts",
     platform = process.env.PLATFORM,
     minimize = mode === "production",
     devServer = undefined,
     bundleFilename = undefined,
     sourceMapFilename = undefined,
     assetsPath = undefined,
-    reactNativePath = new URL("./node_modules/react-native", import.meta.url).pathname,
+    reactNativePath = resolve("react-native"),
   } = env;
+
+  if (!platform) {
+    throw new Error("Missing platform");
+  }
 
   return {
     mode,
@@ -32,16 +50,21 @@ export default (env) => {
       }),
       "./index.ts",
     ],
+    resolve: {
+      ...Repack.getResolveOptions(platform),
+      conditionNames: ["require", "import", "react-native"],
+      exportsFields: ["exports"],
+      alias: babelRuntimeAlias,
+    },
 
     // configures where the build ends up
     output: {
       clean: true,
       hashFunction: "xxhash64",
-      publicPath: Repack.getPublicPath({ platform, devServer }),
       path: path.join(appDirectory, "build/generated", platform),
       filename: "index.bundle",
       chunkFilename: "[name].chunk.bundle",
-      chunkFormat: "module",
+      publicPath: Repack.getPublicPath({ platform, devServer }),
     },
 
     optimization: {
@@ -75,9 +98,6 @@ export default (env) => {
       ],
     },
 
-    resolve: {
-      ...Repack.getResolveOptions(platform),
-    },
     plugins: [
       new webpack.EnvironmentPlugin({ REACT_NAV_LOGGING: "" }),
       new Repack.RepackPlugin({

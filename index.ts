@@ -1,3 +1,7 @@
+// this is the native entrypoint - web is in web/index.ts
+
+import "intl-pluralrules";
+
 import { Script, ScriptManager } from "@callstack/repack/client";
 import { AppRegistry } from "react-native";
 import { name as appName } from "./app.json";
