@@ -1,8 +1,13 @@
 import * as Repack from "@callstack/repack";
-import * as path from "path";
+import { createRequire } from "node:module";
+import path from "node:path";
 import webpack from "webpack";
 
 export const appDirectory = Repack.getDirname(import.meta.url);
+
+export const babelRuntimeAlias = {
+  "@babel/runtime/helpers": path.join(appDirectory, "node_modules/@babel/runtime/helpers"),
+};
 
 /**
  * @param {webpack.RuleSetRule} test
@@ -56,33 +61,45 @@ export const imageLoaderConfigurations = (opts) => [
 /** @return {webpack.RuleSetRule[]} */
 export const babelLoaderConfigurations = ({ devServer } = {}) => [
   {
-    test: /\.[jt]sx?$/,
-    // Add every directory that needs to be compiled by Babel during the build.
+    test: /\.c?[jt]sx?$/,
     include: [
-      path.resolve(appDirectory, "web"),
-      path.resolve(appDirectory, "src"),
-      path.resolve(appDirectory, "data/audio"),
-      path.resolve(appDirectory, "node_modules/expo-av"),
-      path.resolve(appDirectory, "node_modules/react-native-uncompiled"),
-      path.resolve(appDirectory, "node_modules/react-native-calendars"),
-      path.resolve(appDirectory, "node_modules/react-native-swipe-gestures"),
-      path.resolve(appDirectory, "node_modules/@callstack/repack"),
+      /node_modules(.*[/\\])+react-native/,
+      /node_modules(.*[/\\])+@react-native/,
+      /node_modules(.*[/\\])+@react-navigation/,
+      /node_modules(.*[/\\])+@react-native-community/,
+      /node_modules(.*[/\\])+expo/,
+      /node_modules(.*[/\\])+pretty-format/,
+      /node_modules(.*[/\\])+metro/,
+      /node_modules(.*[/\\])+abort-controller/,
+      /node_modules(.*[/\\])+@callstack[/\\]repack/,
+      /node_modules(.*[/\\])+react-native-calendars/,
+      /node_modules(.*[/\\])+@react-native-async-storage/,
+      /node_modules(.*[/\\])+react-freeze/,
     ],
-    use: {
-      loader: "babel-loader",
-      options: {
-        cacheDirectory: true,
-      },
+    loader: "babel-loader",
+    options: {
+      cacheDirectory: true,
+    },
+  },
+  {
+    test: /\.m[jt]sx?$/,
+    include: [/node_modules/],
+    loader: "babel-loader",
+    options: {
+      cacheDirectory: true,
+      presets: [["module:@react-native/babel-preset", { disableImportExportTransform: true }]],
+      comments: true,
     },
   },
   {
     test: /\.[jt]sx?$/,
+    exclude: /node_modules/,
     use: {
       loader: "babel-loader",
       options: {
-        cacheDirectory: true,
         /** Add React Refresh transform only when HMR is enabled. */
         plugins: devServer && devServer.hmr ? ["module:react-refresh/babel"] : undefined,
+        cacheDirectory: true,
       },
     },
   },

@@ -5,6 +5,7 @@ import { GenerateSW } from "workbox-webpack-plugin";
 import {
   appDirectory,
   babelLoaderConfigurations,
+  babelRuntimeAlias,
   imageLoaderConfigurations,
 } from "./webpack.config.common.mjs";
 
@@ -42,7 +43,10 @@ export default (env) => ({
     alias: {
       "react-native$": "react-native-web",
       "@react-native/assets-registry/registry": "react-native-web/dist/modules/AssetRegistry",
+      ...babelRuntimeAlias,
     },
+    conditionNames: ["require", "import", "web"],
+    exportsFields: ["exports"],
     // If you're working on a multi-platform React Native app, web-specific
     // module implementations should be written in files using the extension
     // `.web.js`.
