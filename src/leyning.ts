@@ -2,12 +2,15 @@ import { HDate, ParshaEvent } from "@hebcal/core";
 import {
   Aliyah,
   AliyotMap,
-  Leyning,
   LeyningNames,
+  LeyningParshaHaShavua,
+  LeyningShabbatHoliday,
   LeyningWeekday,
   getLeyningOnDate as getFullLeyningOnDate,
   getLeyningForHolidayKey,
   getLeyningForParsha,
+  makeLeyningParts,
+  makeSummaryFromParts,
 } from "@hebcal/leyning";
 import {
   Triennial,
@@ -22,32 +25,47 @@ export type Reading = {
   name: LeyningNames;
   kind: "shabbat" | "chag" | "weekday" | "mincha";
   parsha?: string[];
-  aliyot: AliyotMap;
+  aliyot?: AliyotMap;
   haftara: Aliyah[] | null;
+  megillah?: AliyotMap;
+  megillahName?: string;
   summary: string;
 };
 
 type KeysOfUnion<T> = T extends any ? keyof T : never;
-type ValuesOfUnion<T, K> = T extends any ? (K extends keyof T ? T[K] : null) : never;
+type ValuesOfUnion<T, K> = T extends any ? (K extends keyof T ? T[K] : undefined) : never;
 const getIfPresent = <T extends object, K extends KeysOfUnion<T>>(
   obj: T,
   key: K,
-): ValuesOfUnion<T, K> => (key in obj ? obj[key] : null) as ValuesOfUnion<T, K>;
+): ValuesOfUnion<T, K> => (key in obj ? obj[key] : undefined) as ValuesOfUnion<T, K>;
 
-const leyningToReading = (leyning: Leyning | LeyningWeekday): Reading => ({
-  name: leyning.name,
-  kind: leyning.name.en.includes("Mincha")
-    ? "mincha"
-    : !leyning.parsha
-    ? "chag"
-    : "fullkriyah" in leyning && leyning.fullkriyah
-    ? "shabbat"
-    : "weekday",
-  parsha: leyning.parsha,
-  aliyot: getIfPresent(leyning, "fullkriyah") || leyning.weekday!,
-  haftara: ensureArrayOrNull(getIfPresent(leyning, "haft")),
-  summary: leyning.summary,
-});
+const leyningToReading = (
+  leyning: LeyningParshaHaShavua | LeyningShabbatHoliday | LeyningWeekday,
+): Reading => {
+  const aliyot = getIfPresent(leyning, "fullkriyah") ?? getIfPresent(leyning, "weekday");
+  const megillah = getIfPresent(leyning, "megillah");
+  return {
+    name: leyning.name,
+    kind: leyning.name.en.includes("Mincha")
+      ? "mincha"
+      : !getIfPresent(leyning, "parsha")
+      ? "chag"
+      : "fullkriyah" in leyning && leyning.fullkriyah
+      ? "shabbat"
+      : "weekday",
+    parsha: getIfPresent(leyning, "parsha") ?? undefined,
+    aliyot,
+    haftara: ensureArrayOrNull(getIfPresent(leyning, "haft") ?? null),
+    megillah,
+    megillahName: megillah?.[1]?.k,
+    summary: megillah
+      ? makeSummaryFromParts([
+          ...(aliyot ? makeLeyningParts(aliyot) : []),
+          ...(megillah ? makeLeyningParts(megillah) : []),
+        ])
+      : leyning.summary,
+  };
+};
 const triennialToReading = (baseReading: Reading, triennial: TriennialAliyot): Reading => ({
   ...baseReading,
   aliyot: triennial.aliyot!,

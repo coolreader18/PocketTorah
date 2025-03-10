@@ -22,7 +22,7 @@ import {
 } from "@react-navigation/stack";
 
 import { HDate } from "@hebcal/core";
-import { formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
+import { formatAliyahShort, makeSummaryFromParts, NUM_VERSES } from "@hebcal/leyning";
 
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import useFonts from "../fonts";
@@ -108,29 +108,37 @@ function AliyahSelectScreen({ navigation, route }: ScreenProps<"AliyahSelectScre
   const namePrefix = reading.kind === "weekday" ? "Weekday " : "";
   const special = !reading.parsha;
 
-  const content = aliyahNums
-    .flatMap((num) => {
+  const aliyot =
+    kriyah &&
+    aliyahNums.flatMap((num) => {
       const summary =
         num in kriyah
           ? formatAliyahShort(kriyah[num], special || kriyah[num].k != kriyah[1].k)
           : num === "H" && reading.haftara
           ? makeSummaryFromParts(reading.haftara)
           : null;
-      return summary ? [{ num, summary }] : [];
-    })
-    .map(({ num, summary }) => (
-      <CustomButton
-        key={num}
-        onPress={() =>
-          navigation.navigate("PlayViewScreen", {
-            readingId,
-            aliyah: num,
-            tri: route.params.tri === null ? "1" : route.params.tri,
-          })
-        }
-        buttonTitle={`${namePrefix}${aliyahName(num)}: ${summary}`}
-      />
-    ));
+      return summary ? [{ num, title: `${namePrefix}${aliyahName(num)}: ${summary}` }] : [];
+    });
+  const megillah =
+    reading.megillahName &&
+    NUM_VERSES[reading.megillahName].slice(1).map((_, i) => ({
+      num: `Megillah${i + 1}` as const,
+      title: `${reading.megillahName} ${i + 1}`,
+    }));
+
+  const content = [...(aliyot || []), ...(megillah || [])].map(({ num, title }) => (
+    <CustomButton
+      key={num}
+      onPress={() =>
+        navigation.navigate("PlayViewScreen", {
+          readingId,
+          aliyah: num,
+          tri: route.params.tri === null ? "1" : route.params.tri,
+        })
+      }
+      buttonTitle={title}
+    />
+  ));
   return (
     <ScrollView>
       <SettingsModal {...{ modalVisible, setModalVisible }} audio={null} />
@@ -149,12 +157,18 @@ const ordinals: { [k in Intl.LDMLPluralRule]: string } = {
   many: "th",
   other: "th",
 };
-export const aliyahName = (num: AliyahNum) =>
+export const aliyahName = (num: Exclude<AliyahNum, `M${number}`>) =>
   num === "M"
     ? "Maftir Aliyah"
     : num == "H"
     ? "Haftarah"
     : `${num}${ordinals[pluralRules.select(Number(num))]} Aliyah`;
+
+export const isMegillahVerse = (num: AliyahNum): num is `Megillah${number}` =>
+  num.startsWith("Megillah");
+
+export const extractMegillahVerse = (num: `Megillah${number}`) =>
+  Number(num.slice("Megillah".length));
 
 export const dateToStr = (date: HDate | Date) =>
   `${date.getFullYear()}-${
@@ -261,7 +275,7 @@ type Params = {
 type FestivalKey = string;
 export type ReadingId = Parshah | FestivalKey | `${number}-${number}-${number}`;
 const aliyahNums = ["1", "2", "3", "4", "5", "6", "7", "M", "H"] as const;
-export type AliyahNum = (typeof aliyahNums)[keyof typeof aliyahNums & number];
+export type AliyahNum = (typeof aliyahNums)[number] | `Megillah${number}`;
 export type ScreenProps<RouteName extends keyof Params> = StackScreenProps<Params, RouteName>;
 export type NavigationProp = StackNavigationProp<Params>;
 

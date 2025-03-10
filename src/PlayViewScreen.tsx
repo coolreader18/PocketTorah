@@ -5,7 +5,14 @@ import React, { useMemo, useState } from "react";
 import useFonts from "../fonts";
 import * as RN from "react-native";
 import { ActivityIndicator, Button, ScrollView, TouchableOpacity, View } from "react-native";
-import { aliyahName, AliyahNum, NavigationProp, ScreenProps } from "./App";
+import {
+  aliyahName,
+  AliyahNum,
+  extractMegillahVerse,
+  isMegillahVerse,
+  NavigationProp,
+  ScreenProps,
+} from "./App";
 import { SettingsModal } from "./SettingsScreen";
 import {
   Book,
@@ -42,7 +49,13 @@ import {
 export type BookName = keyof typeof audioMap;
 
 const getReading = (leyning: Reading, num: AliyahNum) =>
-  ensureArrayOrNull(num === "H" ? leyning.haftara : leyning.aliyot[num]);
+  ensureArrayOrNull(
+    num === "H"
+      ? leyning.haftara
+      : isMegillahVerse(num)
+      ? leyning.megillah?.[extractMegillahVerse(num)] ?? null
+      : leyning.aliyot?.[num] ?? null,
+  );
 
 export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
@@ -68,7 +81,10 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
   const tri = boolQuery(route.params.tri) ?? settingsTri;
   const leyning = useMemo(() => getLeyning(readingId, { tri, il }), [readingId, tri, il]);
 
-  useScreenTitle(navigation, leyning?.name.en?.concat(`, ${aliyahName(params.aliyah)}`) ?? "404");
+  const aliyahString = isMegillahVerse(params.aliyah)
+    ? `${leyning?.megillahName ?? "Megillah verse"} ${extractMegillahVerse(params.aliyah)}`
+    : aliyahName(params.aliyah);
+  useScreenTitle(navigation, leyning?.name.en?.concat(`, ${aliyahString}`) ?? "404");
 
   if (!leyning)
     return (
