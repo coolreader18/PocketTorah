@@ -21,6 +21,7 @@ import {
 import { ReadingId, dateFromStr, isParshah } from "./App";
 import { ensureArrayOrNull } from "./utils";
 
+export type MegillahName = "Ruth" | "Esther" | "Lamentations" | "Song of Songs" | "Ecclesiastes";
 export type Reading = {
   name: LeyningNames;
   kind: "shabbat" | "chag" | "weekday" | "mincha";
@@ -28,7 +29,7 @@ export type Reading = {
   aliyot?: AliyotMap;
   haftara: Aliyah[] | null;
   megillah?: AliyotMap;
-  megillahName?: string;
+  megillahName?: MegillahName;
   summary: string;
 };
 
@@ -57,7 +58,7 @@ const leyningToReading = (
     aliyot,
     haftara: ensureArrayOrNull(getIfPresent(leyning, "haft") ?? null),
     megillah,
-    megillahName: megillah?.[1]?.k,
+    megillahName: megillah?.[1]?.k as MegillahName | undefined,
     summary: megillah
       ? makeSummaryFromParts([
           ...(aliyot ? makeLeyningParts(aliyot) : []),

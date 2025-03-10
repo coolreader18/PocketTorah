@@ -2,16 +2,16 @@ import { Aliyah, NUM_VERSES } from "@hebcal/leyning";
 import binarySearch from "binary-search";
 import { AVPlaybackSource } from "expo-av";
 import React, { useMemo, useState } from "react";
-import useFonts from "../fonts";
 import * as RN from "react-native";
 import { ActivityIndicator, Button, ScrollView, TouchableOpacity, View } from "react-native";
+import useFonts from "../fonts";
 import {
-  aliyahName,
   AliyahNum,
-  extractMegillahVerse,
-  isMegillahVerse,
   NavigationProp,
   ScreenProps,
+  aliyahName,
+  extractMegillahVerse,
+  isMegillahVerse,
 } from "./App";
 import { SettingsModal } from "./SettingsScreen";
 import {
@@ -24,7 +24,7 @@ import {
   hebFont,
   tikkunFont,
 } from "./assetImports";
-import { Reading, fixReadingId, getLeyning } from "./leyning";
+import { MegillahName, Reading, fixReadingId, getLeyning } from "./leyning";
 import { useSettings } from "./settings";
 import {
   CustomButton,
@@ -35,6 +35,7 @@ import {
   useNavigationTheme,
   useStyles,
 } from "./theming";
+import { TropeType } from "./trope";
 import TropeIcon from "./trope-icon.svg";
 import { useAudio } from "./useAudio";
 import {
@@ -56,6 +57,14 @@ const getReading = (leyning: Reading, num: AliyahNum) =>
       ? leyning.megillah?.[extractMegillahVerse(num)] ?? null
       : leyning.aliyot?.[num] ?? null,
   );
+
+const megillotToTrope: { [k in MegillahName]: TropeType } = {
+  Ruth: "3megillot",
+  Esther: "esther",
+  Lamentations: "eicha",
+  "Song of Songs": "3megillot",
+  Ecclesiastes: "3megillot",
+};
 
 export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScreen">) {
   const { params } = route;
@@ -152,11 +161,13 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
         )
       : null;
 
-  const tropes =
+  const tropes: TropeType =
     params.aliyah === "H"
       ? "haftarah"
       : params.readingId.match(/Rosh Hashana|Yom Kippur/i)
       ? "hhd"
+      : isMegillahVerse(params.aliyah) && leyning.megillahName
+      ? megillotToTrope[leyning.megillahName]
       : "torah";
   return (
     <PlayView
@@ -218,7 +229,7 @@ type PlayViewProps = {
   navigation: NavigationProp;
   forceLinebreakVerses?: boolean;
   singleVerseAudio?: boolean;
-  tropes?: "torah" | "haftarah" | "hhd";
+  tropes?: TropeType;
 };
 export type Verse = {
   book: BookName;

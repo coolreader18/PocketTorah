@@ -22,7 +22,7 @@ import {
 } from "@react-navigation/stack";
 
 import { HDate } from "@hebcal/core";
-import { formatAliyahShort, makeSummaryFromParts, NUM_VERSES } from "@hebcal/leyning";
+import { NUM_VERSES, formatAliyahShort, makeSummaryFromParts } from "@hebcal/leyning";
 
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import useFonts from "../fonts";
