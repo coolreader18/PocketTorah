@@ -9,8 +9,6 @@ import {
   getLeyningOnDate as getFullLeyningOnDate,
   getLeyningForHolidayKey,
   getLeyningForParsha,
-  makeLeyningParts,
-  makeSummaryFromParts,
 } from "@hebcal/leyning";
 import {
   Triennial,
@@ -59,12 +57,7 @@ const leyningToReading = (
     haftara: ensureArrayOrNull(getIfPresent(leyning, "haft") ?? null),
     megillah,
     megillahName: megillah?.[1]?.k as MegillahName | undefined,
-    summary: megillah
-      ? makeSummaryFromParts([
-          ...(aliyot ? makeLeyningParts(aliyot) : []),
-          ...(megillah ? makeLeyningParts(megillah) : []),
-        ])
-      : leyning.summary,
+    summary: leyning.summary,
   };
 };
 const triennialToReading = (baseReading: Reading, triennial: TriennialAliyot): Reading => ({

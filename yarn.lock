@@ -3329,16 +3329,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hebcal/core@npm:^5.8.0, @hebcal/core@npm:^5.9.0":
-  version: 5.9.0
-  resolution: "@hebcal/core@npm:5.9.0"
+"@hebcal/core@npm:^5.8.0, @hebcal/core@npm:^5.9.1":
+  version: 5.9.1
+  resolution: "@hebcal/core@npm:5.9.1"
   dependencies:
     "@hebcal/hdate": "npm:^0.13.5"
     "@hebcal/noaa": "npm:^0.8.16"
     quick-lru: "npm:^6.1.2"
     temporal-polyfill: "npm:^0.2.5"
     tslib: "npm:^2.8.1"
-  checksum: 10/d4d5c81e9df9affa01b9128482334d678fc28cdc54b58d4f907859741ca9c5bdbd0e089ca20f8409bcc8ec7a0710a7f07287afbe7ac4675e1e1548114d7cdb51
+  checksum: 10/d61cc98a4431bd69d045771703c4107f2a41b10bc7f4ecac43ee3c9990fd7b5f71b7bd03a05feae3b998c5d768f03f40eaf292016f2f7956287bded54539479f
   languageName: node
   linkType: hard
 
@@ -3356,14 +3356,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hebcal/leyning@npm:^9.0.2, @hebcal/leyning@npm:^9.0.4":
-  version: 9.0.4
-  resolution: "@hebcal/leyning@npm:9.0.4"
+"@hebcal/leyning@npm:^9.0.2, @hebcal/leyning@npm:^9.0.5":
+  version: 9.0.5
+  resolution: "@hebcal/leyning@npm:9.0.5"
   dependencies:
-    "@hebcal/core": "npm:^5.9.0"
+    "@hebcal/core": "npm:^5.9.1"
     "@hebcal/hdate": "npm:^0.13.5"
     tslib: "npm:^2.8.1"
-  checksum: 10/c544eb966e17f2040e44d050448649a3c0433f1d1568c7f8b6f5177a71b132f86df62213c9ab8e8a4bb46d177ca94d8b8724d999799999b6df247f81fecde3bf
+  checksum: 10/b04de01a764a9bee68de67a99990c576dff351c13d89fda5730ac362ca4c677da96c885412a8310f31cc81b0d2cd4c5929103b8e6d49832d168511dea946886d
   languageName: node
   linkType: hard
 
@@ -5501,8 +5501,8 @@ __metadata:
     "@babel/preset-env": "npm:^7.20.0"
     "@babel/runtime": "npm:^7.20.0"
     "@callstack/repack": "npm:^3.7.0"
-    "@hebcal/core": "npm:^5.9.0"
-    "@hebcal/leyning": "npm:^9.0.4"
+    "@hebcal/core": "npm:^5.9.1"
+    "@hebcal/leyning": "npm:^9.0.5"
     "@hebcal/triennial": "npm:^6.0.1"
     "@react-native-async-storage/async-storage": "npm:^1.21"
     "@react-native-community/slider": "npm:^4.5.0"
