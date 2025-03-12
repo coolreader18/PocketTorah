@@ -475,7 +475,7 @@ const Verse = React.memo(function Verse(props: VerseProps) {
     <>
       <Text style={[wordStyle.style, { userSelect: "none" }]}>
         {"\u200F"}
-        {verse.chapterVerse && (
+        {verse.chapterVerse && !wordStyle.tikkun && (
           <View style={styles.verseNumWrapper}>
             <RN.Text style={styles.verseNum}>{fmtChV(verse.chapterVerse)}</RN.Text>
           </View>
