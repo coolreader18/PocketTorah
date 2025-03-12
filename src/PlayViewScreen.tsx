@@ -212,11 +212,16 @@ const getVerseData = (
   sofAudioMismatch = false,
 ): VerseData => {
   const [cNum, vNum] = verse.chapterVerse!;
+  const words = book[cNum][vNum];
   return {
     ...verse,
-    words: book[cNum][vNum],
+    words,
     translation: transBook?.text[cNum][vNum],
-    sofAudioMismatch,
+    // find the start of the sof pasuk group by finding the last word that
+    // doesn't have a mercha, tipcha, sof pasuk, or maqaf
+    sofAudioMismatch: sofAudioMismatch
+      ? words.findLastIndex((word) => !/[\u0596\u05a5\u05c3־]/.test(word)) + 1 || words.length - 3
+      : undefined,
   };
 };
 
@@ -241,7 +246,8 @@ export type VerseInfo = {
   chapterVerse?: [number, number];
   words: string[];
   translation?: string;
-  sofAudioMismatch?: boolean;
+  /** If non-null, the word index at which the mismatched sof pasuk starts */
+  sofAudioMismatch?: number;
 };
 export function PlayView({
   verses,
@@ -462,8 +468,7 @@ const Verse = React.memo(function Verse(props: VerseProps) {
     );
   });
   if (verse.sofAudioMismatch) {
-    // TODO: parse the trope somehow, maybe, to get it just on the mercha tipcha sof pasuk
-    const sofWords = words.splice(-3);
+    const sofWords = words.splice(verse.sofAudioMismatch);
     words.push(
       <RN.Text key="sof" style={styles.sofAudioMismatch}>
         {sofWords}
