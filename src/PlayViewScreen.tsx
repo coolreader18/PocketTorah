@@ -421,7 +421,7 @@ const Verses = React.memo(function Verses({
 });
 
 export const getWordStyle = (tikkun: boolean, textSizeMultiplier: number) => {
-  const deleteRegex = tikkun ? /[\/\u0591-\u05C7]/g : /[\/־]/g;
+  const deleteRegex = tikkun ? /[\/\u0591-\u05C7]/g : /[\/־׀]/g;
   const fontFamily = tikkun ? tikkunFont : hebFont;
   const fontMul = tikkun ? 30 : 36;
   return {
@@ -449,27 +449,32 @@ const fmtChV = ([cNum, vNum]: [number, number]) => `${cNum + 1}:${vNum + 1}`;
 const MAQAF = "־";
 
 const Verse = React.memo(function Verse(props: VerseProps) {
+  const styles = useStyles();
+
   const { verse, changeAudioTime, wordStyle, verseIndex, activeWordIndex } = props;
-  let prevMaqaf = false;
   const words = verse.words.map((word, wordIndex) => {
-    const postMaqaf = prevMaqaf;
-    prevMaqaf = word.endsWith(MAQAF);
     return (
       <Word
         key={wordIndex}
-        {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime, postMaqaf }}
+        {...{ word, verseIndex, wordIndex, wordStyle, changeAudioTime }}
         active={wordIndex === activeWordIndex}
-        // TODO: parse the trope somehow, maybe, to get it just on the mercha tipcha sof pasuk
-        sofAudioMismatch={verse.sofAudioMismatch && verse.words.length - wordIndex <= 3}
       />
     );
   });
+  if (verse.sofAudioMismatch) {
+    // TODO: parse the trope somehow, maybe, to get it just on the mercha tipcha sof pasuk
+    const sofWords = words.splice(-3);
+    words.push(
+      <RN.Text key="sof" style={styles.sofAudioMismatch}>
+        {sofWords}
+      </RN.Text>,
+    );
+  }
 
-  const styles = useStyles();
   return (
     <>
       <Text style={[wordStyle.style, { userSelect: "none" }]}>
-        <Text>{"\u200F"}</Text>
+        {"\u200F"}
         {verse.chapterVerse && (
           <View style={styles.verseNumWrapper}>
             <RN.Text style={styles.verseNum}>{fmtChV(verse.chapterVerse)}</RN.Text>
@@ -492,8 +497,6 @@ export type WordProps = WordIndexInfo & {
   wordStyle: WordStyle;
   word: string;
   active?: boolean;
-  postMaqaf?: boolean;
-  sofAudioMismatch?: boolean;
 };
 
 export function Word({
@@ -503,32 +506,23 @@ export function Word({
   verseIndex,
   wordIndex,
   changeAudioTime,
-  postMaqaf = false,
-  sofAudioMismatch = false,
 }: WordProps) {
   const styles = useStyles();
 
-  const maqaf = !wordStyle.tikkun && word.endsWith(MAQAF);
-  const commonStyles = sofAudioMismatch && styles.sofAudioMismatch;
+  // check if the word has a maqaf or a paseq attached to it,
+  // so that we can attach it back on with special formatting
+  const punct = !wordStyle.tikkun && word.match(/[־׀]$/)?.[0];
   return (
     <>
       <TouchableOpacity
         onPress={changeAudioTime && (() => changeAudioTime(verseIndex, wordIndex))}
         disabled={!changeAudioTime}
       >
-        <RN.Text
-          style={[
-            commonStyles,
-            styles.word,
-            maqaf && styles.wordPreMaqaf,
-            !wordStyle.tikkun && postMaqaf && styles.wordPostMaqaf,
-            active && styles.active,
-          ]}
-        >
+        <RN.Text style={[styles.word, active && styles.active]}>
           {word.replace(wordStyle.deleteRegex, "")}
         </RN.Text>
       </TouchableOpacity>
-      {maqaf && <Text style={commonStyles}>{MAQAF}</Text>}
+      {punct && <RN.Text style={[punct === MAQAF ? styles.maqaf : styles.paseq]}>{punct}</RN.Text>}
     </>
   );
 }
