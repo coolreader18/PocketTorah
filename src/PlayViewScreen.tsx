@@ -1,4 +1,4 @@
-import { Aliyah, NUM_VERSES } from "@hebcal/leyning";
+import { NUM_VERSES } from "@hebcal/leyning";
 import binarySearch from "binary-search";
 import { AVPlaybackSource } from "expo-av";
 import React, { useMemo, useState } from "react";
@@ -17,14 +17,16 @@ import { SettingsModal } from "./SettingsScreen";
 import {
   Book,
   TransBook,
-  audio as audioMap,
+  getAudio,
+  getAudioFromIndex,
   getBook,
   getLabels,
   getTransBook,
   hebFont,
+  loadAudioIndex,
   tikkunFont,
 } from "./assetImports";
-import { MegillahName, Reading, fixReadingId, getLeyning } from "./leyning";
+import { Aliyah, BookName, MegillahName, Reading, fixReadingId, getLeyning } from "./leyning";
 import { useSettings } from "./settings";
 import {
   CustomButton,
@@ -46,8 +48,6 @@ import {
   useScreenOptions,
   useScreenTitle,
 } from "./utils";
-
-export type BookName = keyof typeof audioMap;
 
 const getReading = (leyning: Reading, num: AliyahNum) =>
   ensureArrayOrNull(
@@ -118,22 +118,24 @@ export function PlayViewScreen({ route, navigation }: ScreenProps<"PlayViewScree
 
   const key = params.aliyah + leyning.name.en;
 
-  const [audioSource, sofMismatch] = useMemo(() => {
+  const audioPromise = useMemo(async () => {
     const sofMismatch = Array<boolean>(verseInfo.flat().length).fill(false);
+    const audioIndex = await loadAudioIndex();
     const arr = verseInfo.flat().map(({ book, chapterVerse, sof }, i) => {
-      const src = audioMap[book]?.[fmtChV(chapterVerse!)]?.();
-      if (!src) return null;
+      let src = getAudioFromIndex(audioIndex, book, chapterVerse!);
       const [pref, fallback] = sof ? [src.sof, src.reg] : [src.reg, src.sof];
-      if (pref != null) return pref;
+      if (pref) return getAudio(book, chapterVerse!, sof);
+      if (!fallback) return null;
       sofMismatch[i] = true;
-      return fallback;
+      return getAudio(book, chapterVerse!, !sof);
     });
-    return noneNull(arr) ? [arr, sofMismatch] : [null, null];
+    return noneNull(arr) ? { audioSource: arr, sofMismatch } : null;
   }, [verseInfo]);
-  const haveAudio = audioSource != null;
+  const { audioSource = null, sofMismatch = null } =
+    usePromise(() => audioPromise, [audioPromise]) ?? {};
 
   const labelsPromise: Promise<number[][]> = useMemo(async () => {
-    if (!haveAudio) return await Promise.race([]);
+    if (!(await audioPromise)) return await Promise.race([]);
     return Promise.all(
       verseInfo.flat().map(({ book, chapterVerse }) =>
         // TODO: different labels for sof/reg
@@ -188,14 +190,14 @@ function slice<T>(arr: T[], start: number, end: number): T[] {
   return arr.slice(start, end);
 }
 
-const extractVerses = (aliyah: Aliyah): Verse[] => {
+const extractVerses = <Book extends BookName>(aliyah: Aliyah<Book>): Verse<Book>[] => {
   // these values are 0-indexed and **inclusive**
   const [begChapter, begVerse] = parseChV(aliyah.b);
   const [endChapter, endVerse] = parseChV(aliyah.e);
   const ret = NUM_VERSES[aliyah.k].slice(1).flatMap((numV, cNum) => {
     if (cNum < begChapter || cNum > endChapter) return [];
     const verses = range(numV).map(
-      (_, vNum): Verse => ({ book: aliyah.k as BookName, chapterVerse: [cNum, vNum], sof: false }),
+      (_, vNum): Verse<Book> => ({ book: aliyah.k, chapterVerse: [cNum, vNum], sof: false }),
     );
     const sliceStart = cNum === begChapter ? begVerse : 0;
     const sliceEnd = cNum === endChapter ? endVerse + 1 : verses.length;
@@ -205,12 +207,12 @@ const extractVerses = (aliyah: Aliyah): Verse[] => {
   return ret;
 };
 
-const getVerseData = (
-  verse: Verse,
+const getVerseData = <BookN extends BookName>(
+  verse: Verse<BookN>,
   book: Book,
   transBook?: TransBook,
   sofAudioMismatch = false,
-): VerseData => {
+): VerseData<BookN> => {
   const [cNum, vNum] = verse.chapterVerse!;
   const words = book[cNum][vNum];
   return {
@@ -236,12 +238,12 @@ type PlayViewProps = {
   singleVerseAudio?: boolean;
   tropes?: TropeType;
 };
-export type Verse = {
-  book: BookName;
+export type Verse<Book extends BookName> = {
+  book: Book;
   chapterVerse?: [number, number];
   sof: boolean;
 };
-export type VerseData = Verse & VerseInfo;
+export type VerseData<Book extends BookName> = Verse<Book> & VerseInfo;
 export type VerseInfo = {
   chapterVerse?: [number, number];
   words: string[];

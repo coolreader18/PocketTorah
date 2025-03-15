@@ -1,7 +1,10 @@
+import CopyPlugin from "copy-webpack-plugin";
 import HtmlBundlerPlugin from "html-bundler-webpack-plugin";
 import * as path from "path";
 import webpack from "webpack";
+import type {} from "webpack-dev-server";
 import { GenerateSW } from "workbox-webpack-plugin";
+import type { Env } from "./webpack.config";
 import {
   appDirectory,
   babelLoaderConfigurations,
@@ -9,11 +12,12 @@ import {
   imageLoaderConfigurations,
 } from "./webpack.config.common.mjs";
 
-const publicPath = process.env.WEBPACK_PUBLIC_PATH || "/PocketTorah/";
-
 const platform = "web";
 
-export default (env) => ({
+const publicPath = process.env.WEBPACK_PUBLIC_PATH || "/PocketTorah/";
+
+export default (env: Env): webpack.Configuration => ({
+  context: appDirectory,
   // configures where the build ends up
   output: {
     path: path.resolve(appDirectory, "dist"),
@@ -22,10 +26,10 @@ export default (env) => ({
       keep: /(\.nojekyll|\.git)$/,
     },
   },
+  mode: env.mode,
   target: "web",
 
   // ...the rest of your config
-
   module: {
     rules: [
       {
@@ -55,15 +59,24 @@ export default (env) => ({
   },
   plugins: [
     new webpack.EnvironmentPlugin({ REACT_NAV_LOGGING: "" }),
-    new webpack.DefinePlugin({ __DEV__: !env.production }),
+    new webpack.DefinePlugin({ __DEV__: env.mode !== "production" }),
+    new CopyPlugin({
+      patterns: [
+        {
+          from: "data/",
+          to: "data/",
+          filter: (path) => /\.(json|mp3)$/.test(path),
+        },
+      ],
+    }),
     new HtmlBundlerPlugin({
-      entry: { index: path.resolve(appDirectory, "web/index.html") },
+      entry: { index: "web/index.html" },
       loaderOptions: {
         sources: [
           {
             tag: "link",
             attributes: ["href"],
-            filter: ({ attributes }) => attributes.rel === "manifest",
+            filter: ({ attributes }) => (attributes as any).rel === "manifest",
           },
         ],
       },
@@ -82,6 +95,7 @@ export default (env) => ({
 
   devServer: {
     port: 8080,
+    static: { directory: "data", publicPath: publicPath + "data", watch: false },
     client: {
       overlay: {
         errors: true,
@@ -90,7 +104,7 @@ export default (env) => ({
       },
     },
     onListening: (devServer) => {
-      const port = devServer.server.address().port;
+      const { port } = devServer.server!.address() as import("node:net").AddressInfo;
       console.log(`PocketTorah at http://localhost:${port}${publicPath}`);
     },
   },

@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "web-dev": "webpack serve --mode development --env platform=web",
     "web-dist": "webpack b --mode production --env platform=web",
-    "prepare": "node data/torah/json/process_mam.js && node split-audio.mjs"
+    "prepare": "node data/torah/json/process_mam.js && node split-audio.mjs && node data/audio/generate-index.mjs"
   },
   "dependencies": {
     "@hebcal/core": "^5.9.1",
@@ -54,6 +54,7 @@
     "babel-jest": "^29.2.1",
     "babel-loader": "^9.1.3",
     "babel-plugin-react-native-web": "^0.19.8",
+    "copy-webpack-plugin": "^13.0.0",
     "eslint": "^8.19.0",
     "gematria": "^1.0.0",
     "html-bundler-webpack-plugin": "^2.11.0",
